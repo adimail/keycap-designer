@@ -13,6 +13,7 @@ import {
 } from '@dnd-kit/sortable'
 import { useProjectStore } from '@/store/useProjectStore'
 import { LayerRow } from './LayerRow'
+import { AnimatePresence, motion } from 'framer-motion'
 
 export function LayersTab() {
   const { activeProject, selectedKeyIds, reorderLayers } = useProjectStore()
@@ -70,17 +71,34 @@ export function LayersTab() {
           items={firstKey.layers.map((l) => l.id)}
           strategy={verticalListSortingStrategy}
         >
-          {[...firstKey.layers].reverse().map((layer) => (
-            <LayerRow key={layer.id} layer={layer} />
-          ))}
+          <AnimatePresence>
+            {[...firstKey.layers].reverse().map((layer) => (
+              <motion.div
+                key={layer.id}
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.2 }}
+              >
+                <LayerRow layer={layer} />
+              </motion.div>
+            ))}
+          </AnimatePresence>
         </SortableContext>
       </DndContext>
 
-      {firstKey.layers.length === 0 && (
-        <p className="text-xs text-[var(--sea-ink-soft)] text-center py-4">
-          No image layers added.
-        </p>
-      )}
+      <AnimatePresence>
+        {firstKey.layers.length === 0 && (
+          <motion.p
+            className="text-xs text-[var(--sea-ink-soft)] text-center py-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            No image layers added.
+          </motion.p>
+        )}
+      </AnimatePresence>
 
       <div className="flex items-center gap-2 p-2 bg-[var(--surface)] border border-[var(--line)] rounded mt-1">
         <div className="w-4 h-4" />

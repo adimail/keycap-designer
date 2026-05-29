@@ -5,6 +5,7 @@ import { v4 as uuidv4 } from 'uuid'
 import { Trash2, Plus } from 'lucide-react'
 import { toast } from 'sonner'
 import { ActionButton } from '@/components/ActionButton'
+import { motion } from 'framer-motion'
 
 export function ImagesTab() {
   const { activeProject, addImage, deleteImage, selectedKeyIds } = useProjectStore()
@@ -90,13 +91,30 @@ export function ImagesTab() {
       >
         <Plus className="w-4 h-4" /> Upload Image
       </ActionButton>
-      <div className="grid grid-cols-2 gap-2 overflow-y-auto pb-10">
+      <motion.div
+        className="grid grid-cols-2 gap-2 overflow-y-auto pb-10"
+        variants={{
+          hidden: {},
+          visible: { transition: { staggerChildren: 0.04 } },
+        }}
+        initial="hidden"
+        animate="visible"
+      >
         {(activeProject?.images || []).map((img) => {
           const usage = getUsageCount(img.id)
           const isStampingThis = stampMode && stampImageId === img.id
           return (
-            <div
+            <motion.div
               key={img.id}
+              variants={{
+                hidden: { opacity: 0, scale: 0.9 },
+                visible: {
+                  opacity: 1,
+                  scale: 1,
+                  transition: { type: 'spring', stiffness: 260, damping: 24 },
+                },
+              }}
+              whileHover={{ y: -2, boxShadow: '0 8px 20px rgba(0,0,0,0.15)' }}
               className={`relative group border rounded overflow-hidden aspect-square bg-[var(--foam)] ${isStampingThis ? 'border-[var(--color-action)] shadow-[0_0_0_2px_var(--color-action)]' : 'border-[var(--line)]'}`}
             >
               <img
@@ -130,10 +148,10 @@ export function ImagesTab() {
                   <Trash2 className="w-3 h-3" />
                 </ActionButton>
               </div>
-            </div>
+            </motion.div>
           )
         })}
-      </div>
+      </motion.div>
     </div>
   )
 }

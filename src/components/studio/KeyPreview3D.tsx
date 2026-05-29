@@ -1,10 +1,5 @@
 import { Canvas } from '@react-three/fiber'
-import {
-  OrbitControls,
-  Text,
-  GizmoHelper,
-  GizmoViewport,
-} from '@react-three/drei'
+import { OrbitControls, Text } from '@react-three/drei'
 import { useProjectStore } from '@/store/useProjectStore'
 import { KeyMesh } from '../editor/Viewport3D/KeyMesh'
 import { Lighting } from '../editor/Viewport3D/Lighting'
@@ -71,8 +66,8 @@ export function KeyPreview3D({ keyId }: KeyPreview3DProps) {
       camera={{ position: [0, 2, 2.5], fov: 35 }}
       gl={{ antialias: true }}
     >
-      <Lighting />
       <Suspense fallback={null}>
+        <Lighting />
         <KeyMesh keyData={key} centerInScene={true} />
         <OrientationCompass />
       </Suspense>
@@ -83,12 +78,6 @@ export function KeyPreview3D({ keyId }: KeyPreview3DProps) {
         maxDistance={15}
         target={[0, 0, 0]}
       />
-      <GizmoHelper alignment="bottom-right" margin={[40, 40]}>
-        <GizmoViewport
-          axisColors={['#ff4b4b', '#4bff4b', '#4b4bff']}
-          labelColor="white"
-        />
-      </GizmoHelper>
     </Canvas>
   )
 }

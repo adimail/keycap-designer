@@ -5,6 +5,7 @@ import { timeAgo } from '@/utils/date'
 import { useState } from 'react'
 import { ActionButton } from '@/components/ActionButton'
 import { ActionLink } from '@/components/ActionLink'
+import { motion, AnimatePresence } from 'framer-motion'
 
 export function ProjectCard({
   project,
@@ -22,9 +23,13 @@ export function ProjectCard({
   const [tempName, setTempName] = useState(project.name)
 
   return (
-    <div
+    <motion.div
       className="group border border-[var(--line)] rounded-xl bg-[var(--surface)] relative overflow-hidden"
       onMouseLeave={() => setMenuOpen(false)}
+      whileHover={{ y: -4, boxShadow: '0 12px 40px rgba(0,0,0,0.12)' }}
+      transition={{ type: 'spring', stiffness: 300, damping: 24 }}
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
     >
       {/* Thumbnail */}
       <Link
@@ -32,7 +37,11 @@ export function ProjectCard({
         params={{ id: project.id }}
         className="block relative"
       >
-        <div className="h-36 bg-gradient-to-br from-[var(--foam)] to-[var(--sand)] flex items-center justify-center overflow-hidden">
+        <motion.div
+          className="h-36 bg-gradient-to-br from-[var(--foam)] to-[var(--sand)] flex items-center justify-center overflow-hidden"
+          whileHover={{ scale: 1.05 }}
+          transition={{ duration: 0.3 }}
+        >
           {project.thumbnail ? (
             <img
               src={project.thumbnail}
@@ -40,11 +49,15 @@ export function ProjectCard({
               alt=""
             />
           ) : (
-            <span className="opacity-20 text-3xl font-semibold tracking-widest">
+            <motion.span
+              className="opacity-20 text-3xl font-semibold tracking-widest"
+              animate={{ opacity: [0.15, 0.25, 0.15] }}
+              transition={{ repeat: Infinity, duration: 3, ease: 'easeInOut' }}
+            >
               KF
-            </span>
+            </motion.span>
           )}
-        </div>
+        </motion.div>
         {/* Key count badge */}
         <span className="absolute top-2.5 right-2.5 bg-white/80 dark:bg-black/40 backdrop-blur-sm text-[11px] font-medium px-2 py-0.5 rounded-md border border-black/10 dark:border-white/10">
           {project.keys.length} keys
@@ -111,34 +124,42 @@ export function ProjectCard({
           >
             <MoreVertical className="w-3.5 h-3.5" />
           </ActionButton>
-          {menuOpen && (
-            <div className="absolute right-0 bottom-full mb-1.5 w-36 bg-white dark:bg-zinc-800 rounded-xl shadow-xl border border-[var(--line)] z-20 py-1 overflow-hidden">
-              <ActionButton
-                type="button"
-                onClick={() => {
-                  setIsEditing(true)
-                  setMenuOpen(false)
-                }}
-                variant="ghost"
-                size="n"
-                className="w-full justify-start gap-2 px-3 py-1.5 text-xs hover:bg-[var(--line)] transition-colors normal-case tracking-normal"
+          <AnimatePresence>
+            {menuOpen && (
+              <motion.div
+                className="absolute right-0 bottom-full mb-1.5 w-36 bg-white dark:bg-zinc-800 rounded-xl shadow-xl border border-[var(--line)] z-20 py-1 overflow-hidden"
+                initial={{ opacity: 0, scale: 0.95, y: 4 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 4 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 30 }}
               >
-                <Edit2 className="w-3.5 h-3.5" /> Rename
-              </ActionButton>
-              <div className="my-1 border-t border-[var(--line)]" />
-              <ActionButton
-                type="button"
-                onClick={() => onDelete(project.id)}
-                variant="danger"
-                size="n"
-                className="w-full justify-start gap-2 px-3 py-1.5 text-xs text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors normal-case tracking-normal border-0"
-              >
-                <Trash2 className="w-3.5 h-3.5" /> Delete
-              </ActionButton>
-            </div>
-          )}
+                <ActionButton
+                  type="button"
+                  onClick={() => {
+                    setIsEditing(true)
+                    setMenuOpen(false)
+                  }}
+                  variant="ghost"
+                  size="n"
+                  className="w-full justify-start gap-2 px-3 py-1.5 text-xs hover:bg-[var(--line)] transition-colors normal-case tracking-normal"
+                >
+                  <Edit2 className="w-3.5 h-3.5" /> Rename
+                </ActionButton>
+                <div className="my-1 border-t border-[var(--line)]" />
+                <ActionButton
+                  type="button"
+                  onClick={() => onDelete(project.id)}
+                  variant="danger"
+                  size="n"
+                  className="w-full justify-start gap-2 px-3 py-1.5 text-xs text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors normal-case tracking-normal border-0"
+                >
+                  <Trash2 className="w-3.5 h-3.5" /> Delete
+                </ActionButton>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
-    </div>
+    </motion.div>
   )
 }

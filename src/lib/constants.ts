@@ -296,3 +296,63 @@ export const QUERY_KEYS = {
   PROJECT_DETAIL: (id: string) => ['projects', id, 'detail'],
   PROJECT_IMAGES: (id: string) => ['projects', id, 'images'],
 } as const
+
+export const PROFILE_METADATA = {
+  Cherry: {
+    name: 'Cherry',
+    height: '9.5mm',
+    sculpted: true,
+    shape: 'Cylindrical',
+  },
+  OEM: { name: 'OEM', height: '11.9mm', sculpted: true, shape: 'Cylindrical' },
+  SA: { name: 'SA', height: '16.5mm', sculpted: true, shape: 'Spherical' },
+  DSA: { name: 'DSA', height: '7.6mm', sculpted: false, shape: 'Spherical' },
+  XDA: { name: 'XDA', height: '8.5mm', sculpted: false, shape: 'Spherical' },
+} as const
+
+export const LAYOUT_OPTIONS = [
+  { label: '60%', value: '60%' },
+  { label: '65%', value: '65%' },
+  { label: '75%', value: '75%' },
+  { label: 'TKL 80%', value: '80%' },
+  { label: '96%', value: '96%' },
+  { label: '100%', value: '100%' },
+] as const
+
+export const PROFILE_OPTIONS = [
+  { label: 'Cherry', value: 'Cherry' },
+  { label: 'OEM', value: 'OEM' },
+  { label: 'SA', value: 'SA' },
+  { label: 'DSA', value: 'DSA' },
+  { label: 'XDA', value: 'XDA' },
+] as const
+
+export const PRESET_COLORS = [
+  '#ffffff',
+  '#f5f5f5',
+  '#cccccc',
+  '#888888',
+  '#333333',
+  '#111111',
+  '#ffcdd2',
+  '#f44336',
+  '#b71c1c',
+  '#c8e6c9',
+  '#4caf50',
+  '#1b5e20',
+  '#bbdefb',
+  '#2196f3',
+  '#0d47a1',
+  '#fff9c4',
+  '#ffeb3b',
+  '#f57f17',
+  '#e1bee7',
+  '#9c27b0',
+  '#4a148c',
+  '#ffcc80',
+  '#ff9800',
+  '#e65100',
+  '#d7ccc8',
+  '#795548',
+  '#3e2723',
+]

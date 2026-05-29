@@ -1,11 +1,19 @@
 import { create } from 'zustand'
-import type { Project, KeyData, Layer, ProjectImage, GlobalSettings } from '@/types'
+import { startTransition } from 'react'
+import type {
+  Project,
+  KeyData,
+  Layer,
+  ProjectImage,
+  GlobalSettings,
+} from '@/types'
 import { getLayoutKeys } from '@/lib/layouts'
 import { v4 as uuidv4 } from 'uuid'
 import { toast } from 'sonner'
-import { TIMING, DEFAULT_COLORS, UNDO_REDO } from '@/lib/constants'
+import { DEFAULT_COLORS, UNDO_REDO } from '@/lib/constants'
 import { DEFAULT_KEY_STYLE } from '@/lib/layouts'
 import { useUIStore } from './useUIStore'
+import { saveProject } from '@/lib/db'
 
 interface ProjectState {
   activeProject: Project | null
@@ -14,15 +22,17 @@ interface ProjectState {
   hasUnsavedChanges: boolean
   selectedKeyIds: string[]
   studioActiveKeyId: string | null
+  isProcessing: boolean
 
+  setIsProcessing: (val: boolean) => void
   setActiveProject: (project: Project) => void
   setSelectedKeys: (ids: string[] | ((prev: string[]) => string[])) => void
   setStudioActiveKeyId: (id: string | null) => void
 
-  updateSelectedKeys: (updates: Partial<KeyData>) => Promise<void>
+  updateSelectedKeys: (updates: Partial<KeyData>) => void
   updateKeyLabelStyle: (updates: Partial<KeyData['labelStyle']>) => void
-  updateGlobalSettings: (updates: Partial<GlobalSettings>) => Promise<void>
-  changeLayout: (layout: string) => Promise<void>
+  updateGlobalSettings: (updates: Partial<GlobalSettings>) => void
+  changeLayout: (layout: string) => void
   addImage: (image: ProjectImage) => void
   deleteImage: (id: string) => void
   addLayerToSelection: (layer: Omit<Layer, 'id'>) => void
@@ -54,11 +64,6 @@ const mutateProject = (
   activeProject: newProject,
 })
 
-const waitForUiCommit = () =>
-  new Promise<void>((resolve) => {
-    window.setTimeout(resolve, TIMING.UI_COMMIT_WAIT)
-  })
-
 export const useProjectStore = create<ProjectState>((set, get) => ({
   activeProject: null,
   past: [],
@@ -66,6 +71,9 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   hasUnsavedChanges: false,
   selectedKeyIds: [],
   studioActiveKeyId: null,
+  isProcessing: false,
+
+  setIsProcessing: (val) => set({ isProcessing: val }),
 
   setActiveProject: (project) =>
     set({
@@ -104,17 +112,31 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       nextProfile !== activeProject.globalSettings.profile
 
     if (profileChanged) {
-      await toast.promise(
-        (async () => {
-          set(
-            mutateProject(get(), {
-              ...activeProject,
-              globalSettings: { ...activeProject.globalSettings, ...updates },
-              updatedAt: new Date().toISOString(),
-            }),
-          )
-          await waitForUiCommit()
-        })(),
+      set({ isProcessing: true })
+      // Let UI paint the loading state
+      await new Promise((r) => setTimeout(r, 60))
+
+      toast.promise(
+        new Promise<void>((resolve) => {
+          startTransition(() => {
+            set((state) => ({
+              ...mutateProject(state, {
+                ...state.activeProject!,
+                globalSettings: {
+                  ...state.activeProject!.globalSettings,
+                  ...updates,
+                },
+                updatedAt: new Date().toISOString(),
+              }),
+            }))
+
+            // Allow render to complete before removing overlay
+            setTimeout(() => {
+              set({ isProcessing: false })
+              resolve()
+            }, 50)
+          })
+        }),
         {
           loading: `Applying ${nextProfile} profile...`,
           success: `Project profile set to ${nextProfile}`,
@@ -137,26 +159,32 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     const { activeProject } = get()
     if (!activeProject) return
 
-    const keys = getLayoutKeys(layout)
+    set({ isProcessing: true })
+    await new Promise((r) => setTimeout(r, 60))
 
-    await toast.promise(
-      (async () => {
-        set({
-          ...mutateProject(get(), {
-            ...activeProject,
-            layout,
-            keys,
-            updatedAt: new Date().toISOString(),
-          }),
-          selectedKeyIds: [],
+    toast.promise(
+      new Promise<void>((resolve) => {
+        startTransition(() => {
+          const keys = getLayoutKeys(layout)
+          set((state) => ({
+            ...mutateProject(state, {
+              ...state.activeProject!,
+              layout,
+              keys,
+              updatedAt: new Date().toISOString(),
+            }),
+            selectedKeyIds: [],
+          }))
+          setTimeout(() => {
+            set({ isProcessing: false })
+            resolve()
+          }, 50)
         })
-        await waitForUiCommit()
-      })(),
+      }),
       {
         loading: `Switching to ${layout} layout...`,
         success: `Switched to ${layout} layout`,
         error: 'Failed to switch layout',
-        description: `Mapped ${keys.length} keys`,
       },
     )
   },
@@ -168,32 +196,45 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       updates,
       'profile',
     )
-    const keys = activeProject.keys.map((k) =>
-      selectedKeyIds.includes(k.id) ? { ...k, ...updates } : k,
-    )
+
     if (profileWasUpdated) {
+      set({ isProcessing: true })
+      await new Promise((r) => setTimeout(r, 60))
       const profile = updates.profile ?? activeProject.globalSettings.profile
-      await toast.promise(
-        (async () => {
-          set(
-            mutateProject(get(), {
-              ...activeProject,
-              keys,
-              updatedAt: new Date().toISOString(),
-            }),
-          )
-          await waitForUiCommit()
-        })(),
+
+      toast.promise(
+        new Promise<void>((resolve) => {
+          startTransition(() => {
+            set((state) => {
+              const keys = state.activeProject!.keys.map((k) =>
+                selectedKeyIds.includes(k.id) ? { ...k, ...updates } : k,
+              )
+              return {
+                ...mutateProject(state, {
+                  ...state.activeProject!,
+                  keys,
+                  updatedAt: new Date().toISOString(),
+                }),
+              }
+            })
+            setTimeout(() => {
+              set({ isProcessing: false })
+              resolve()
+            }, 50)
+          })
+        }),
         {
           loading: `Applying ${profile} override...`,
           success: `Profile override set to ${profile}`,
           error: 'Failed to apply profile override',
-          description: `${selectedKeyIds.length} key${selectedKeyIds.length === 1 ? '' : 's'} updated`,
         },
       )
       return
     }
 
+    const keys = activeProject.keys.map((k) =>
+      selectedKeyIds.includes(k.id) ? { ...k, ...updates } : k,
+    )
     set(
       mutateProject(get(), {
         ...activeProject,
@@ -223,6 +264,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   saveCurrentProject: async () => {
     const { activeProject } = get()
     if (activeProject) {
+      await saveProject(activeProject)
       set({ hasUnsavedChanges: false })
     }
   },
@@ -436,7 +478,8 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
   placeStamp: (hoveredKeyId, localPos, localNormal) => {
     const { activeProject, selectedKeyIds } = get()
-    const { stampImageId, stampScope, stampSnapToCenter } = useUIStore.getState()
+    const { stampImageId, stampScope, stampSnapToCenter } =
+      useUIStore.getState()
     if (!activeProject || !stampImageId) return
 
     const layerId = uuidv4()

@@ -10,15 +10,7 @@ import { ActionLink } from '@/components/ActionLink'
 import { LayoutGroup, motion } from 'framer-motion'
 import { useBeforeUnload } from '@/hooks/useBeforeUnload'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcut'
-
-const layoutOptions = [
-  { label: '60%', value: '60%' },
-  { label: '65%', value: '65%' },
-  { label: '75%', value: '75%' },
-  { label: 'TKL 80%', value: '80%' },
-  { label: '96%', value: '96%' },
-  { label: '100%', value: '100%' },
-]
+import { LAYOUT_OPTIONS } from '#/lib/constants'
 
 export function TopBar() {
   const navigate = useNavigate()
@@ -29,7 +21,8 @@ export function TopBar() {
     hasUnsavedChanges,
     changeLayout,
   } = useProjectStore()
-  const { leftPanelOpen, rightPanelOpen, toggleLeftPanel, toggleRightPanel } = useUIStore()
+  const { leftPanelOpen, rightPanelOpen, toggleLeftPanel, toggleRightPanel } =
+    useUIStore()
 
   const [isSaving, setIsSaving] = useState(false)
   const [isEditingName, setIsEditingName] = useState(false)
@@ -55,15 +48,6 @@ export function TopBar() {
 
   useBeforeUnload(hasUnsavedChanges)
 
-  useKeyboardShortcuts([
-    {
-      key: 's',
-      ctrlKey: true,
-      metaKey: true,
-      callback: () => handleSave(),
-    },
-  ])
-
   const handleSave = async () => {
     setIsSaving(true)
     toast.promise(saveCurrentProject(), {
@@ -79,23 +63,22 @@ export function TopBar() {
     })
   }
 
+  useKeyboardShortcuts([
+    {
+      key: 's',
+      ctrlKey: true,
+      callback: () => handleSave(),
+    },
+    {
+      key: 's',
+      metaKey: true,
+      callback: () => handleSave(),
+    },
+  ])
+
   const handleBack = (e: React.MouseEvent) => {
-    if (hasUnsavedChanges) {
-      e.preventDefault()
-      setModalConfig({
-        isOpen: true,
-        title: 'Discard Changes?',
-        message: 'You have unsaved changes. Are you sure you want to leave?',
-        confirmText: 'Leave Page',
-        danger: true,
-        onConfirm: () => {
-          closeModal()
-          navigate({ to: '/' })
-        },
-      })
-    } else {
-      navigate({ to: '/' })
-    }
+    e.preventDefault()
+    navigate({ to: '/' })
   }
 
   const handleLayoutRequest = (newLayout: string) => {
@@ -115,7 +98,26 @@ export function TopBar() {
     })
   }
 
-  if (!activeProject) return null
+  if (!activeProject) {
+    return (
+      <div className="h-12 border-b border-[var(--line)] bg-[var(--surface)] flex items-center justify-between px-4 shrink-0 z-10">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 bg-[var(--line)] rounded animate-pulse" />
+          <div className="w-[1px] h-4 bg-[var(--line)] mx-1 hidden lg:block" />
+          <div className="w-32 h-5 bg-[var(--line)] rounded animate-pulse" />
+        </div>
+        <div className="hidden md:flex items-center gap-1">
+          <div className="w-64 h-8 bg-[var(--line)] rounded animate-pulse" />
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="w-20 h-8 bg-[var(--line)] rounded animate-pulse" />
+          <div className="w-20 h-8 bg-[var(--line)] rounded animate-pulse" />
+          <div className="w-[1px] h-4 bg-[var(--line)] mx-1 hidden lg:block" />
+          <div className="w-8 h-8 bg-[var(--line)] rounded animate-pulse" />
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="h-12 border-b border-[var(--line)] bg-[var(--surface)] flex items-center justify-between px-4 shrink-0 z-10">
@@ -126,7 +128,6 @@ export function TopBar() {
           variant="ghost"
           size="n"
           className="p-1 text-[var(--sea-ink-soft)] hover:text-[var(--color-action)]"
-          title="Back to Projects"
         >
           <ArrowLeft className="h-4 w-4" />
         </ActionButton>
@@ -136,7 +137,6 @@ export function TopBar() {
           variant="ghost"
           size="n"
           className={`p-1.5 rounded transition-colors hidden lg:flex ${leftPanelOpen ? 'bg-[var(--line)] text-[var(--color-action)]' : 'text-[var(--sea-ink-soft)] hover:bg-[var(--line)] hover:text-[var(--sea-ink)]'}`}
-          title="Toggle Left Panel"
         >
           <PanelLeft className="w-4 h-4" />
         </ActionButton>
@@ -181,7 +181,7 @@ export function TopBar() {
 
       <LayoutGroup id="editor-layout-options">
         <div className="hidden md:flex items-center rounded-md bg-[var(--line)] p-1 gap-1">
-          {layoutOptions.map((option) => (
+          {LAYOUT_OPTIONS.map((option) => (
             <ActionButton
               type="button"
               key={option.value}
@@ -222,7 +222,6 @@ export function TopBar() {
           params={{ id: activeProject.id }}
           variant="outline"
           size="sm"
-          title="Key Studio"
         >
           <Aperture className="h-3.5 w-3.5" />
           Studio
@@ -234,7 +233,6 @@ export function TopBar() {
           variant="ghost"
           size="n"
           className={`p-1.5 rounded transition-colors hidden lg:flex ${rightPanelOpen ? 'bg-[var(--line)] text-[var(--color-action)]' : 'text-[var(--sea-ink-soft)] hover:bg-[var(--line)] hover:text-[var(--sea-ink)]'}`}
-          title="Toggle Right Panel"
         >
           <PanelRight className="w-4 h-4" />
         </ActionButton>

@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { motion } from 'framer-motion'
-import { Layers, HardDrive, Cpu } from 'lucide-react'
+import { Layers, HardDrive, Cpu, ArrowRight } from 'lucide-react'
 
 export const Route = createFileRoute('/about')({
   component: AboutStudio,
@@ -71,11 +71,30 @@ const PLASTICS_INFO = [
 ]
 
 function AboutStudio() {
+  const cardVariants = {
+    hidden: { opacity: 0, x: -20 },
+    visible: {
+      opacity: 1,
+      x: 0,
+      transition: { type: 'spring', stiffness: 260, damping: 24 },
+    },
+  }
+
+  const materialVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: { type: 'spring', stiffness: 260, damping: 24 },
+    },
+  }
+
   return (
     <main className="page-wrap px-4 py-12">
       <motion.section
-        initial={{ opacity: 0, y: 15 }}
-        animate={{ opacity: 1, y: 0 }}
+        initial={{ opacity: 0, y: 20, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ type: 'spring', stiffness: 200, damping: 25 }}
         className="island-shell rounded-3xl p-8 sm:p-12 mb-10 text-center sm:text-left relative overflow-hidden"
       >
         <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-bl from-[var(--color-action)]/5 to-transparent rounded-bl-full pointer-events-none" />
@@ -93,17 +112,35 @@ function AboutStudio() {
 
       <div className="grid gap-8 md:grid-cols-2">
         <section className="flex flex-col gap-4">
-          <div className="flex items-center gap-2">
+          <motion.div
+            className="flex items-center gap-2"
+            initial={{ opacity: 0, x: -15 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.15, duration: 0.3 }}
+          >
             <Layers className="h-5 w-5 text-[var(--color-action)]" />
             <h2 className="text-lg font-extrabold uppercase tracking-wider text-[var(--sea-ink)]">
               Height Profiles Guide
             </h2>
-          </div>
+          </motion.div>
 
-          <div className="flex flex-col gap-4">
+          <motion.div
+            className="flex flex-col gap-4"
+            variants={{
+              hidden: {},
+              visible: { transition: { staggerChildren: 0.07 } },
+            }}
+            initial="hidden"
+            animate="visible"
+          >
             {PROFILES_INFO.map((profile) => (
-              <div
+              <motion.div
                 key={profile.name}
+                variants={cardVariants}
+                whileHover={{
+                  y: -2,
+                  boxShadow: '0 8px 30px rgba(0,0,0,0.08)',
+                }}
                 className="island-shell rounded-xl p-5 border border-[var(--line)] bg-[var(--surface)] hover:bg-[var(--surface-strong)] transition-all"
               >
                 <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
@@ -122,23 +159,38 @@ function AboutStudio() {
                 <p className="text-xs text-[var(--sea-ink-soft)] leading-relaxed m-0">
                   {profile.description}
                 </p>
-              </div>
+              </motion.div>
             ))}
-          </div>
+          </motion.div>
         </section>
 
         <section className="flex flex-col gap-4">
-          <div className="flex items-center gap-2">
+          <motion.div
+            className="flex items-center gap-2"
+            initial={{ opacity: 0, x: -15 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.2, duration: 0.3 }}
+          >
             <HardDrive className="h-5 w-5 text-[var(--color-action)]" />
             <h2 className="text-lg font-extrabold uppercase tracking-wider text-[var(--sea-ink)]">
               Material Engineering (PBT vs ABS)
             </h2>
-          </div>
+          </motion.div>
 
-          <div className="flex flex-col gap-4">
+          <motion.div
+            className="flex flex-col gap-4"
+            variants={{
+              hidden: {},
+              visible: { transition: { staggerChildren: 0.1 } },
+            }}
+            initial="hidden"
+            animate="visible"
+          >
             {PLASTICS_INFO.map((material) => (
-              <div
+              <motion.div
                 key={material.name}
+                variants={materialVariants}
+                whileHover={{ y: -3 }}
                 className="island-shell rounded-xl p-6 border border-[var(--line)] bg-[var(--surface)]"
               >
                 <h3 className="font-extrabold text-[var(--sea-ink)] text-base mb-3">
@@ -155,9 +207,15 @@ function AboutStudio() {
                       <span>{material.shineResistance}%</span>
                     </div>
                     <div className="h-1.5 w-full bg-zinc-200 dark:bg-zinc-800 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-[var(--color-action)] transition-all duration-500"
-                        style={{ width: `${material.shineResistance}%` }}
+                      <motion.div
+                        className="h-full bg-[var(--color-action)]"
+                        initial={{ width: '0%' }}
+                        animate={{ width: `${material.shineResistance}%` }}
+                        transition={{
+                          duration: 1,
+                          delay: 0.5,
+                          ease: 'easeOut',
+                        }}
                       />
                     </div>
                   </div>
@@ -189,13 +247,18 @@ function AboutStudio() {
                     </div>
                   </div>
                 </div>
-              </div>
+              </motion.div>
             ))}
-          </div>
+          </motion.div>
         </section>
       </div>
 
-      <section className="mt-10 island-shell rounded-2xl p-6 text-center border-dashed bg-white/20">
+      <motion.section
+        className="mt-10 island-shell rounded-2xl p-6 text-center border-dashed bg-white/20"
+        initial={{ opacity: 0, y: 15 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.8, duration: 0.3 }}
+      >
         <Cpu className="h-6 w-6 text-[var(--color-action)] mx-auto mb-2" />
         <h3 className="text-xs font-black uppercase tracking-wider text-[var(--sea-ink)] mb-1">
           Dye-Sublimation vs. Double-Shot Injection
@@ -206,7 +269,7 @@ function AboutStudio() {
           directly into the plastic grains, yielding highly durable legends with
           continuous tone coverage.
         </p>
-      </section>
+      </motion.section>
     </main>
   )
 }

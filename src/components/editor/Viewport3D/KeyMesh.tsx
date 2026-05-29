@@ -49,6 +49,9 @@ const PROFILES: Record<string, any> = {
   },
 }
 
+// Global cache to prevent recalculating geometries
+const geometryCache = new Map<string, THREE.BufferGeometry>()
+
 function getRowStr(keyData: KeyData) {
   if (keyData.label === 'SPACE' || keyData.widthUnits >= 3) return 'SPACE'
   const r = Math.round(keyData.row)
@@ -117,6 +120,8 @@ function LayerDecal({
         opacity={layer.opacity}
         polygonOffset
         polygonOffsetFactor={-10}
+        depthTest={true}
+        depthWrite={false}
         {...(texture && { 'map-anisotropy': 16 })}
       />
     </Decal>
@@ -134,12 +139,8 @@ export function KeyMesh({
   const [hovered, setHovered] = useState(false)
   const [ghostTex, setGhostTex] = useState<THREE.Texture | null>(null)
 
-  const {
-    selectedKeyIds,
-    setSelectedKeys,
-    activeProject,
-    placeStamp,
-  } = useProjectStore()
+  const { selectedKeyIds, setSelectedKeys, activeProject, placeStamp } =
+    useProjectStore()
   const {
     stampMode,
     stampImageId,
@@ -175,6 +176,11 @@ export function KeyMesh({
   const tilt = profConfig.tilts[rowStr] * (Math.PI / 180)
 
   const geometry = useMemo(() => {
+    const cacheKey = `${width}-${depth}-${profile}-${rowStr}-${h}-${tilt}`
+    if (geometryCache.has(cacheKey)) {
+      return geometryCache.get(cacheKey)!
+    }
+
     const geo = new RoundedBoxGeometry(width, 1, depth, 16, 0.05)
     const pos = geo.attributes.position
 
@@ -225,14 +231,9 @@ export function KeyMesh({
     }
 
     geo.computeVertexNormals()
+    geometryCache.set(cacheKey, geo)
     return geo
-  }, [width, depth, profConfig, rowStr, h, tilt])
-
-  useEffect(() => {
-    return () => {
-      geometry.dispose()
-    }
-  }, [geometry])
+  }, [width, depth, profConfig, profile, rowStr, h, tilt])
 
   const roughness =
     finish === 'glossy' ? 0.1 : finish === 'transparent' ? 0.1 : 1.0

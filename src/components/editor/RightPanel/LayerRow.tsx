@@ -9,10 +9,13 @@ import { ActionButton } from '@/components/ActionButton'
 export function LayerRow({ layer }: { layer: Layer }) {
   const { attributes, listeners, setNodeRef, transform, transition } =
     useSortable({ id: layer.id })
-  const { updateLayer, deleteLayer } = useProjectStore()
+  const { updateLayer, deleteLayer, activeProject } = useProjectStore()
   const { setEditingLayerId } = useUIStore()
 
   const style = { transform: CSS.Transform.toString(transform), transition }
+
+  const imgObj = activeProject?.images.find((i) => i.id === layer.imageData)
+  const imageSrc = imgObj ? imgObj.data : layer.imageData
 
   return (
     <div
@@ -27,9 +30,9 @@ export function LayerRow({ layer }: { layer: Layer }) {
       >
         <GripVertical className="w-4 h-4" />
       </div>
-      {layer.imageData && (
+      {imageSrc && (
         <img
-          src={layer.imageData}
+          src={imageSrc as string}
           alt=""
           className="w-6 h-6 object-cover rounded bg-white"
         />

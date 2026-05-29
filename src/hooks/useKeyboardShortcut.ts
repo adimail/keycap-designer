@@ -20,9 +20,11 @@ export function useKeyboardShortcuts(
       const isInput =
         e.target instanceof HTMLInputElement ||
         e.target instanceof HTMLTextAreaElement
-      if (isInput) return
 
       shortcuts.forEach((s) => {
+        const isSave = s.key === 's' && (e.ctrlKey || e.metaKey)
+        if (isInput && !isSave) return
+
         const keyMatch = e.key === s.key
         const ctrlMatch = s.ctrlKey === undefined || s.ctrlKey === e.ctrlKey
         const metaMatch = s.metaKey === undefined || s.metaKey === e.metaKey

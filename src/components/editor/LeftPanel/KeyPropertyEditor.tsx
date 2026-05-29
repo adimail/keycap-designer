@@ -108,9 +108,8 @@ export function KeyPropertyEditor() {
       <ActionButton
         type="button"
         onClick={resetSelectedKeys}
-        variant="danger"
+        variant="outline"
         size="sm"
-        className="border-0 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30"
       >
         <RotateCcw className="w-3 h-3" /> Reset to Defaults
       </ActionButton>
