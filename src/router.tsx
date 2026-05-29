@@ -3,6 +3,7 @@ import { routeTree } from './routeTree.gen'
 
 export function getRouter() {
   const router = createTanStackRouter({
+    basepath: '/keycap-designer',
     routeTree,
     scrollRestoration: true,
     defaultPreload: 'intent',
