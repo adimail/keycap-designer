@@ -43,6 +43,8 @@ interface ProjectState {
   updateProjectName: (name: string) => void
   addCustomKey: (key: KeyData) => void
   removeKey: (keyId: string) => void
+  transformEnterCluster: (style: 'ansi' | 'iso' | 'bae') => void
+  toggleSteppedCaps: (stepped: boolean) => void
   undo: () => void
   redo: () => void
   setHasUnsavedChanges: (val: boolean) => void
@@ -113,7 +115,6 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
     if (profileChanged) {
       set({ isProcessing: true })
-      // Let UI paint the loading state
       await new Promise((r) => setTimeout(r, 60))
 
       toast.promise(
@@ -130,7 +131,6 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
               }),
             }))
 
-            // Allow render to complete before removing overlay
             setTimeout(() => {
               set({ isProcessing: false })
               resolve()
@@ -443,6 +443,116 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       mutateProject(get(), {
         ...activeProject,
         keys: activeProject.keys.filter((k) => k.id !== keyId),
+        updatedAt: new Date().toISOString(),
+      }),
+    )
+  },
+
+  transformEnterCluster: (style) => {
+    const { activeProject } = get()
+    if (!activeProject) return
+
+    const enterKey = activeProject.keys.find((k) => k.label === 'ENTER')
+    if (!enterKey) return
+
+    let baseY = enterKey.row
+    if (enterKey.shape === 'iso-enter' || enterKey.shape === 'big-ass-enter') {
+      baseY = enterKey.row + 1
+    }
+    const rightEdge = enterKey.col + enterKey.widthUnits
+
+    const keys = activeProject.keys.map((k) => {
+      if (k.label === 'ENTER') {
+        if (style === 'ansi') {
+          return {
+            ...k,
+            shape: 'standard' as const,
+            row: baseY,
+            col: rightEdge - 2.25,
+            widthUnits: 2.25,
+            heightUnits: 1,
+            visible: true,
+          }
+        }
+        if (style === 'iso') {
+          return {
+            ...k,
+            shape: 'iso-enter' as const,
+            row: baseY - 1,
+            col: rightEdge - 1.5,
+            widthUnits: 1.5,
+            heightUnits: 2,
+            visible: true,
+          }
+        }
+        if (style === 'bae') {
+          return {
+            ...k,
+            shape: 'big-ass-enter' as const,
+            row: baseY - 1,
+            col: rightEdge - 2.25,
+            widthUnits: 2.25,
+            heightUnits: 2,
+            visible: true,
+          }
+        }
+      }
+      if (k.label === '\\') {
+        if (style === 'ansi') {
+          return {
+            ...k,
+            row: baseY - 1,
+            col: rightEdge - 1.5,
+            widthUnits: 1.5,
+            heightUnits: 1,
+            visible: true,
+          }
+        }
+        if (style === 'iso') {
+          return {
+            ...k,
+            row: baseY,
+            col: rightEdge - 2.25,
+            widthUnits: 1,
+            heightUnits: 1,
+            visible: true,
+          }
+        }
+        if (style === 'bae') {
+          return { ...k, visible: false }
+        }
+      }
+      return k
+    })
+
+    set(
+      mutateProject(get(), {
+        ...activeProject,
+        keys,
+        updatedAt: new Date().toISOString(),
+      }),
+    )
+  },
+
+  toggleSteppedCaps: (stepped) => {
+    const { activeProject, selectedKeyIds } = get()
+    if (!activeProject) return
+    const keys = activeProject.keys.map((k) => {
+      if (
+        selectedKeyIds.includes(k.id) &&
+        (k.label === 'CAPS' || k.label === 'CAPSLOCK')
+      ) {
+        return {
+          ...k,
+          shape: stepped ? ('stepped-caps' as const) : ('standard' as const),
+        }
+      }
+      return k
+    })
+    set(
+      mutateProject(get(), {
+        ...activeProject,
+        keys,
         updatedAt: new Date().toISOString(),
       }),
     )

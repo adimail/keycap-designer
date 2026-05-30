@@ -9,7 +9,13 @@ import { motion, AnimatePresence, LayoutGroup } from 'framer-motion'
 
 export function RightPanel() {
   const [tab, setTab] = useState<'layers' | 'images'>('layers')
-  const { activeProject, updateGlobalSettings } = useProjectStore()
+  const {
+    activeProject,
+    selectedKeyIds,
+    updateGlobalSettings,
+    transformEnterCluster,
+    toggleSteppedCaps,
+  } = useProjectStore()
   const { rightPanelOpen } = useUIStore()
 
   if (!activeProject) {
@@ -31,6 +37,14 @@ export function RightPanel() {
       </div>
     )
   }
+
+  const selectedKeys = activeProject.keys.filter((k) =>
+    selectedKeyIds.includes(k.id),
+  )
+  const enterKey = selectedKeys.find((k) => k.label === 'ENTER')
+  const capsKey = selectedKeys.find(
+    (k) => k.label === 'CAPS' || k.label === 'CAPSLOCK',
+  )
 
   return (
     <div
@@ -73,6 +87,46 @@ export function RightPanel() {
             </ActionButton>
           </div>
         </LayoutGroup>
+
+        {enterKey && (
+          <div className="p-4 border-b border-[var(--line)] flex flex-col gap-2 bg-[var(--surface-strong)]">
+            <label className="text-[10px] font-bold text-[var(--sea-ink-soft)] uppercase">
+              Enter Key Shape
+            </label>
+            <SegmentedControl
+              options={[
+                { label: 'ANSI', value: 'ansi' },
+                { label: 'ISO', value: 'iso' },
+                { label: 'BAE', value: 'bae' },
+              ]}
+              value={
+                enterKey.shape === 'iso-enter'
+                  ? 'iso'
+                  : enterKey.shape === 'big-ass-enter'
+                    ? 'bae'
+                    : 'ansi'
+              }
+              onChange={(v) => transformEnterCluster(v as any)}
+            />
+          </div>
+        )}
+
+        {capsKey && (
+          <div className="p-4 border-b border-[var(--line)] flex flex-col gap-2 bg-[var(--surface-strong)]">
+            <label className="text-[10px] font-bold text-[var(--sea-ink-soft)] uppercase">
+              Caps Lock Shape
+            </label>
+            <SegmentedControl
+              options={[
+                { label: 'Standard', value: 'standard' },
+                { label: 'Stepped', value: 'stepped' },
+              ]}
+              value={capsKey.shape === 'stepped-caps' ? 'stepped' : 'standard'}
+              onChange={(v) => toggleSteppedCaps(v === 'stepped')}
+            />
+          </div>
+        )}
+
         <div className="p-4 flex-1 overflow-y-auto">
           <AnimatePresence mode="wait">
             <motion.div

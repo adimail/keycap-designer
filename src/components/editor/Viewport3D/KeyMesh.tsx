@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect, useMemo } from 'react'
 import { Text, Decal, useTexture } from '@react-three/drei'
-import { RoundedBoxGeometry } from 'three-stdlib'
+import { mergeBufferGeometries } from 'three-stdlib'
 import * as THREE from 'three'
 import type { KeyData, Layer } from '@/types'
 import { useProjectStore } from '@/store/useProjectStore'
@@ -49,7 +49,6 @@ const PROFILES: Record<string, any> = {
   },
 }
 
-// Global cache to prevent recalculating geometries
 const geometryCache = new Map<string, THREE.BufferGeometry>()
 
 function getRowStr(keyData: KeyData) {
@@ -73,6 +72,16 @@ function getRotationFromNormal(
   const euler = new THREE.Euler().setFromQuaternion(quaternion)
   euler.z += layerRotation
   return euler
+}
+
+function createShape(points: number[][]) {
+  const shape = new THREE.Shape()
+  shape.moveTo(points[0][0], points[0][1])
+  for (let i = 1; i < points.length; i++) {
+    shape.lineTo(points[i][0], points[i][1])
+  }
+  shape.closePath()
+  return shape
 }
 
 function LayerDecal({
@@ -167,8 +176,8 @@ export function KeyMesh({
   const x = centerInScene ? 0 : keyData.col + keyData.widthUnits / 2
   const z = centerInScene ? 0 : keyData.row + hU / 2
 
-  const width = keyData.widthUnits - 0.06
-  const depth = hU - 0.06
+  const width = keyData.widthUnits
+  const depth = hU
 
   const rowStr = getRowStr(keyData)
   const profConfig = PROFILES[profile] || PROFILES['Cherry']
@@ -176,64 +185,142 @@ export function KeyMesh({
   const tilt = profConfig.tilts[rowStr] * (Math.PI / 180)
 
   const geometry = useMemo(() => {
-    const cacheKey = `${width}-${depth}-${profile}-${rowStr}-${h}-${tilt}`
+    const cacheKey = `${width}-${depth}-${profile}-${rowStr}-${h}-${tilt}-${keyData.shape || 'standard'}`
     if (geometryCache.has(cacheKey)) {
       return geometryCache.get(cacheKey)!
     }
 
-    const geo = new RoundedBoxGeometry(width, 1, depth, 16, 0.05)
-    const pos = geo.attributes.position
+    const geosParams: { shape: THREE.Shape; offsetY: number }[] = []
 
-    const insetX = (1.0 * (1 - profConfig.topScaleX)) / 2
-    const insetZ = (1.0 * (1 - profConfig.topScaleZ)) / 2
+    if (keyData.shape === 'iso-enter') {
+      const pts = [
+        [-0.67, 0.92],
+        [-0.67, 0.08],
+        [-0.42, 0.08],
+        [-0.42, -0.92],
+        [0.67, -0.92],
+        [0.67, 0.92],
+      ]
+      geosParams.push({ shape: createShape(pts), offsetY: 0 })
+    } else if (keyData.shape === 'big-ass-enter') {
+      const pts = [
+        [-0.295, 0.92],
+        [-0.295, -0.08],
+        [-1.045, -0.08],
+        [-1.045, -0.92],
+        [1.045, -0.92],
+        [1.045, 0.92],
+      ]
+      geosParams.push({ shape: createShape(pts), offsetY: 0 })
+    } else if (keyData.shape === 'stepped-caps') {
+      const leftPts = [
+        [-0.875 + 0.08, 0.5 - 0.08],
+        [-0.875 + 0.08, -0.5 + 0.08],
+        [0.375 - 0.08, -0.5 + 0.08],
+        [0.375 - 0.08, 0.5 - 0.08],
+      ]
+      geosParams.push({ shape: createShape(leftPts), offsetY: 0 })
 
-    for (let i = 0; i < pos.count; i++) {
-      let vx = pos.getX(i)
-      let vy = pos.getY(i)
-      let vz = pos.getZ(i)
-
-      const ny = vy + 0.5
-
-      const currentHalfWidth = width / 2
-      const currentHalfDepth = depth / 2
-      vx = vx * ((currentHalfWidth - insetX * ny) / currentHalfWidth)
-      vz = vz * ((currentHalfDepth - insetZ * ny) / currentHalfDepth)
-
-      let finalY = ny * h
-      const originalVz = pos.getZ(i)
-      finalY += ny * (-originalVz * Math.tan(tilt))
-
-      let dip = 0
-      const nx = vx / currentHalfWidth
-      const nz = vz / currentHalfDepth
-
-      if (rowStr === 'SPACE') {
-        dip = -Math.cos(nz * (Math.PI / 2)) * profConfig.scoopDepth
-      } else {
-        if (profConfig.type === 'cylindrical') {
-          dip = Math.cos(nx * (Math.PI / 2)) * profConfig.scoopDepth
-        } else {
-          const dist = Math.sqrt(nx * nx + nz * nz)
-          dip =
-            Math.max(0, Math.cos(Math.min(dist, 1) * (Math.PI / 2))) *
-            profConfig.scoopDepth
-        }
-      }
-
-      let scoopBlend = 0
-      if (ny > 0.8) {
-        scoopBlend = (ny - 0.8) / 0.2
-        scoopBlend = scoopBlend * scoopBlend * (3 - 2 * scoopBlend)
-      }
-      finalY -= scoopBlend * dip
-
-      pos.setXYZ(i, vx, finalY, vz)
+      const rightPts = [
+        [0.375 + 0.08, 0.5 - 0.08],
+        [0.375 + 0.08, -0.5 + 0.08],
+        [0.875 - 0.08, -0.5 + 0.08],
+        [0.875 - 0.08, 0.5 - 0.08],
+      ]
+      geosParams.push({ shape: createShape(rightPts), offsetY: -0.2 })
+    } else {
+      const w = keyData.widthUnits
+      const d = hU
+      const pts = [
+        [-w / 2 + 0.08, d / 2 - 0.08],
+        [-w / 2 + 0.08, -d / 2 + 0.08],
+        [w / 2 - 0.08, -d / 2 + 0.08],
+        [w / 2 - 0.08, d / 2 - 0.08],
+      ]
+      geosParams.push({ shape: createShape(pts), offsetY: 0 })
     }
 
-    geo.computeVertexNormals()
-    geometryCache.set(cacheKey, geo)
-    return geo
-  }, [width, depth, profConfig, profile, rowStr, h, tilt])
+    const extrudedGeometries = geosParams.map((g) => {
+      const geo = new THREE.ExtrudeGeometry(g.shape, {
+        depth: 0.9,
+        bevelEnabled: true,
+        bevelSegments: 16,
+        bevelSize: 0.05,
+        bevelThickness: 0.05,
+      })
+
+      geo.rotateX(-Math.PI / 2)
+      geo.translate(0, -0.45 + g.offsetY, 0)
+
+      const pos = geo.attributes.position
+      const totalHalfWidth = width / 2
+      const totalHalfDepth = depth / 2
+      const insetX = (1.0 * (1 - profConfig.topScaleX)) / 2
+      const insetZ = (1.0 * (1 - profConfig.topScaleZ)) / 2
+
+      for (let i = 0; i < pos.count; i++) {
+        let vx = pos.getX(i)
+        let vy = pos.getY(i) - g.offsetY
+        let vz = pos.getZ(i)
+
+        const ny = vy + 0.5
+
+        vx = vx * ((totalHalfWidth - insetX * ny) / totalHalfWidth)
+        vz = vz * ((totalHalfDepth - insetZ * ny) / totalHalfDepth)
+
+        let finalY = ny * h
+        finalY += ny * (-vz * Math.tan(tilt))
+
+        let dip = 0
+        const nx = vx / totalHalfWidth
+        const nz = vz / totalHalfDepth
+
+        if (rowStr === 'SPACE') {
+          dip = -Math.cos(nz * (Math.PI / 2)) * profConfig.scoopDepth
+        } else {
+          if (profConfig.type === 'cylindrical') {
+            dip = Math.cos(nx * (Math.PI / 2)) * profConfig.scoopDepth
+          } else {
+            const dist = Math.sqrt(nx * nx + nz * nz)
+            dip =
+              Math.max(0, Math.cos(Math.min(dist, 1) * (Math.PI / 2))) *
+              profConfig.scoopDepth
+          }
+        }
+
+        let scoopBlend = 0
+        if (ny > 0.8) {
+          scoopBlend = (ny - 0.8) / 0.2
+          scoopBlend = scoopBlend * scoopBlend * (3 - 2 * scoopBlend)
+        }
+        finalY -= scoopBlend * dip
+
+        pos.setXYZ(i, vx, finalY + g.offsetY, vz)
+      }
+
+      geo.computeVertexNormals()
+      return geo
+    })
+
+    const finalGeo =
+      extrudedGeometries.length > 1
+        ? mergeBufferGeometries(extrudedGeometries, false)
+        : extrudedGeometries[0]
+
+    geometryCache.set(cacheKey, finalGeo!)
+    return finalGeo!
+  }, [
+    width,
+    depth,
+    profConfig,
+    profile,
+    rowStr,
+    h,
+    tilt,
+    keyData.shape,
+    keyData.widthUnits,
+    hU,
+  ])
 
   const roughness =
     finish === 'glossy' ? 0.1 : finish === 'transparent' ? 0.1 : 1.0

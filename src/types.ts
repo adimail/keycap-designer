@@ -22,6 +22,7 @@ export interface KeyData {
   heightUnits?: number
   visible: boolean
   label: string
+  shape?: 'standard' | 'iso-enter' | 'big-ass-enter' | 'stepped-caps'
   labelStyle: {
     fontFamily: string
     fontSize: number
