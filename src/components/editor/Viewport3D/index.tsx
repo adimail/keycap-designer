@@ -16,6 +16,7 @@ import { StampHUD } from './StampHUD'
 import { Suspense, useRef, useEffect, useMemo } from 'react'
 import * as THREE from 'three'
 import { toast } from 'sonner'
+import { useKeyNavigation } from '@/hooks/useKeyNavigation'
 
 interface Viewport3DProps {
   isStudioMode?: boolean
@@ -106,7 +107,9 @@ export function Viewport3D({ isStudioMode }: Viewport3DProps = {}) {
     setEditingLayerId,
     setStampHoverInfo,
   } = useUIStore()
+
   const controlsRef = useRef<any>(null)
+  const navigateKey = useKeyNavigation()
 
   useEffect(() => {
     if (stampMode) {
@@ -126,6 +129,29 @@ export function Viewport3D({ isStudioMode }: Viewport3DProps = {}) {
         e.target instanceof HTMLTextAreaElement
       )
         return
+
+      // --- Arrow Navigation ---
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault()
+        if (!stampMode && !editingLayerId) navigateKey('left', e.shiftKey)
+        return
+      }
+      if (e.key === 'ArrowRight') {
+        e.preventDefault()
+        if (!stampMode && !editingLayerId) navigateKey('right', e.shiftKey)
+        return
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault()
+        if (!stampMode && !editingLayerId) navigateKey('up', e.shiftKey)
+        return
+      }
+      if (e.key === 'ArrowDown') {
+        e.preventDefault()
+        if (!stampMode && !editingLayerId) navigateKey('down', e.shiftKey)
+        return
+      }
+      // ------------------------
 
       if ((e.metaKey || e.ctrlKey) && e.key === 'z') {
         e.preventDefault()
@@ -185,6 +211,7 @@ export function Viewport3D({ isStudioMode }: Viewport3DProps = {}) {
     setStampMode,
     setEditingLayerId,
     setStampHoverInfo,
+    navigateKey,
   ])
 
   return (

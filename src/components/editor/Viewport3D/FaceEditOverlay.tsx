@@ -12,30 +12,32 @@ import {
   ArrowUp,
   ArrowDown,
 } from 'lucide-react'
+import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcut'
 
 export function FaceEditOverlay() {
   const { editingLayerId, setEditingLayerId } = useUIStore()
   const { updateLayer, activeProject } = useProjectStore()
 
-  if (!editingLayerId || !activeProject) return null
-
   let layer: Layer | undefined
-  for (const k of activeProject.keys) {
-    layer = k.layers.find((l) => l.id === editingLayerId)
-    if (layer) break
+  if (activeProject && editingLayerId) {
+    for (const k of activeProject.keys) {
+      layer = k.layers.find((l) => l.id === editingLayerId)
+      if (layer) break
+    }
   }
 
-  if (!layer) return null
-
   const handleScale = (delta: number) => {
+    if (!layer) return
     updateLayer(layer.id, { scale: Math.max(0.01, layer.scale + delta) })
   }
 
   const handleRotation = (delta: number) => {
+    if (!layer) return
     updateLayer(layer.id, { rotation: layer.rotation + delta })
   }
 
   const handleXOffset = (delta: number) => {
+    if (!layer) return
     const val = layer.position.x + delta
     const updates: Partial<Layer> = {
       position: {
@@ -53,6 +55,7 @@ export function FaceEditOverlay() {
   }
 
   const handleYOffset = (delta: number) => {
+    if (!layer) return
     const val = layer.position.y + delta
     const updates: Partial<Layer> = {
       position: {
@@ -68,6 +71,22 @@ export function FaceEditOverlay() {
     }
     updateLayer(layer.id, updates)
   }
+
+  useKeyboardShortcuts(
+    [
+      { key: 'ArrowLeft', callback: () => handleXOffset(-0.01) },
+      { key: 'ArrowRight', callback: () => handleXOffset(0.01) },
+      { key: 'ArrowUp', callback: () => handleYOffset(-0.01) },
+      { key: 'ArrowDown', callback: () => handleYOffset(0.01) },
+      { key: '=', callback: () => handleScale(0.01) },
+      { key: '+', callback: () => handleScale(0.01) },
+      { key: '-', callback: () => handleScale(-0.01) },
+      { key: '_', callback: () => handleScale(-0.01) },
+    ],
+    { disabled: !layer },
+  )
+
+  if (!layer) return null
 
   return (
     <div className="absolute inset-0 z-20 flex flex-col items-center justify-end pb-24 pointer-events-none">

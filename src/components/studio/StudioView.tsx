@@ -5,7 +5,7 @@ import { useProjectStore } from '@/store/useProjectStore'
 import { StudioLeftPanel } from './StudioLeftPanel'
 import { StudioRightPanel } from './StudioRightPanel'
 import { ActionButton } from '@/components/ActionButton'
-import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcut'
+import { useKeyNavigation } from '@/hooks/useKeyNavigation'
 
 interface StudioViewProps {
   initialKeyId?: string | null
@@ -17,6 +17,8 @@ export function StudioView({ initialKeyId, onKeyIdChange }: StudioViewProps) {
   const { activeProject, saveCurrentProject, setSelectedKeys, selectedKeyIds } =
     useProjectStore()
 
+  const navigateKey = useKeyNavigation()
+
   useEffect(() => {
     if (!activeProject) return
 
@@ -26,79 +28,30 @@ export function StudioView({ initialKeyId, onKeyIdChange }: StudioViewProps) {
       return
     }
 
-    if (selectedKeyIds[0] !== initialKeyId) {
+    if (!selectedKeyIds.includes(initialKeyId)) {
       setSelectedKeys([initialKeyId])
     }
   }, [initialKeyId, activeProject?.id])
 
   useEffect(() => {
-    if (selectedKeyIds.length === 1 && selectedKeyIds[0] !== initialKeyId) {
-      onKeyIdChange(selectedKeyIds[0])
+    if (selectedKeyIds.length > 0) {
+      const headId = selectedKeyIds[selectedKeyIds.length - 1]
+      if (headId !== initialKeyId) {
+        onKeyIdChange(headId)
+      }
     }
-  }, [selectedKeyIds, initialKeyId])
-
-  const handleNavigate = useCallback(
-    (newId: string) => {
-      onKeyIdChange(newId)
-      setSelectedKeys([newId])
-    },
-    [onKeyIdChange, setSelectedKeys],
-  )
+  }, [selectedKeyIds, initialKeyId, onKeyIdChange])
 
   const getVisibleKeys = () =>
     activeProject?.keys.filter((k) => k.visible) || []
 
   const handleNavigatePrev = useCallback(() => {
-    const visible = getVisibleKeys()
-    const idx = visible.findIndex((k) => k.id === initialKeyId)
-    if (idx > 0) handleNavigate(visible[idx - 1].id)
-  }, [initialKeyId, activeProject, handleNavigate])
+    navigateKey('left', false)
+  }, [navigateKey])
 
   const handleNavigateNext = useCallback(() => {
-    const visible = getVisibleKeys()
-    const idx = visible.findIndex((k) => k.id === initialKeyId)
-    if (idx < visible.length - 1) handleNavigate(visible[idx + 1].id)
-  }, [initialKeyId, activeProject, handleNavigate])
-
-  const handleNavigateVertical = useCallback(
-    (direction: 'up' | 'down') => {
-      const visible = getVisibleKeys()
-      const current = visible.find((k) => k.id === initialKeyId)
-      if (!current) return
-
-      const currentCenter = current.col + current.widthUnits / 2
-      const candidates = visible.filter((k) =>
-        direction === 'up' ? k.row < current.row : k.row > current.row,
-      )
-      if (candidates.length === 0) return
-
-      const targetRow =
-        direction === 'up'
-          ? Math.max(...candidates.map((k) => k.row))
-          : Math.min(...candidates.map((k) => k.row))
-
-      const rowKeys = candidates.filter((k) => k.row === targetRow)
-      const closest = rowKeys.reduce((prev, curr) => {
-        const prevDiff = Math.abs(
-          prev.col + prev.widthUnits / 2 - currentCenter,
-        )
-        const currDiff = Math.abs(
-          curr.col + curr.widthUnits / 2 - currentCenter,
-        )
-        return currDiff < prevDiff ? curr : prev
-      })
-
-      handleNavigate(closest.id)
-    },
-    [initialKeyId, activeProject, handleNavigate],
-  )
-
-  useKeyboardShortcuts([
-    { key: 'ArrowLeft', callback: handleNavigatePrev },
-    { key: 'ArrowRight', callback: handleNavigateNext },
-    { key: 'ArrowUp', callback: () => handleNavigateVertical('up') },
-    { key: 'ArrowDown', callback: () => handleNavigateVertical('down') },
-  ])
+    navigateKey('right', false)
+  }, [navigateKey])
 
   const handleBack = async () => {
     await saveCurrentProject()

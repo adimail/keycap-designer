@@ -3,6 +3,7 @@ import { useProjectStore } from '@/store/useProjectStore'
 import { useUIStore } from '@/store/useUIStore'
 import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
+import type { KeyData } from '@/types'
 
 export function CameraController({
   controlsRef,
@@ -11,7 +12,7 @@ export function CameraController({
   controlsRef: any
   isStudioMode?: boolean
 }) {
-  const { cameraCommand, setCameraCommand } = useUIStore()
+  const { cameraCommand, setCameraCommand, cameraFocusTargetId } = useUIStore()
   const { activeProject, selectedKeyIds } = useProjectStore()
   const { camera, gl, size } = useThree()
   const studioTarget = useRef(new THREE.Vector3(0, 0, 0))
@@ -77,6 +78,90 @@ export function CameraController({
   useEffect(() => {
     if (!cameraCommand) return
 
+    if (cameraCommand === 'focus-key') {
+      if (!isStudioMode && activeProject) {
+        let keysToFrame: KeyData[] = []
+        if (selectedKeyIds.length > 1) {
+          keysToFrame = activeProject.keys.filter((k) =>
+            selectedKeyIds.includes(k.id),
+          )
+        } else {
+          const targetId =
+            cameraFocusTargetId || selectedKeyIds[selectedKeyIds.length - 1]
+          const targetKey = activeProject.keys.find((k) => k.id === targetId)
+          if (targetKey) keysToFrame = [targetKey]
+        }
+
+        if (keysToFrame.length > 0) {
+          let minX = Infinity,
+            maxX = -Infinity,
+            minZ = Infinity,
+            maxZ = -Infinity
+          activeProject.keys.forEach((k) => {
+            if (!k.visible) return
+            minX = Math.min(minX, k.col)
+            maxX = Math.max(maxX, k.col + k.widthUnits)
+            minZ = Math.min(minZ, k.row)
+            maxZ = Math.max(maxZ, k.row + (k.heightUnits || 1))
+          })
+          if (minX === Infinity) {
+            minX = 0
+            maxX = 0
+            minZ = 0
+            maxZ = 0
+          }
+          const boardCenterX = minX + (maxX - minX) / 2
+          const boardCenterZ = minZ + (maxZ - minZ) / 2
+
+          let selMinX = Infinity,
+            selMaxX = -Infinity,
+            selMinZ = Infinity,
+            selMaxZ = -Infinity
+          keysToFrame.forEach((k) => {
+            selMinX = Math.min(selMinX, k.col)
+            selMaxX = Math.max(selMaxX, k.col + k.widthUnits)
+            selMinZ = Math.min(selMinZ, k.row)
+            selMaxZ = Math.max(selMaxZ, k.row + (k.heightUnits || 1))
+          })
+          const selWidth = Math.max(selMaxX - selMinX, 1)
+          const selDepth = Math.max(selMaxZ - selMinZ, 1)
+          const selCenterX = selMinX + selWidth / 2
+          const selCenterZ = selMinZ + selDepth / 2
+
+          const targetWorldX = selCenterX - boardCenterX
+          const targetWorldZ = selCenterZ - boardCenterZ
+
+          const aspect = size.width / Math.max(size.height, 1)
+          const verticalFov = THREE.MathUtils.degToRad(
+            'fov' in camera ? camera.fov : 40,
+          )
+          const horizontalFov =
+            2 * Math.atan(Math.tan(verticalFov / 2) * aspect)
+          const radius =
+            Math.sqrt(selWidth * selWidth + selDepth * selDepth) / 2
+
+          let distance =
+            Math.max(
+              radius / Math.sin(verticalFov / 2),
+              radius / Math.sin(horizontalFov / 2),
+            ) * 1.5
+
+          distance = Math.max(distance, 5)
+
+          const targetPos = new THREE.Vector3(targetWorldX, 0, targetWorldZ)
+          const viewDirection = new THREE.Vector3(0, 0.7, 0.6).normalize()
+
+          animatedTarget.current.copy(targetPos)
+          animatedPosition.current.copy(
+            targetPos.clone().add(viewDirection.multiplyScalar(distance)),
+          )
+          isAnimatingCamera.current = true
+        }
+      }
+      setCameraCommand(null)
+      return
+    }
+
     if (cameraCommand === 'center') {
       queueFitKeyboardView()
       setCameraCommand(null)
@@ -113,13 +198,16 @@ export function CameraController({
     }
   }, [
     cameraCommand,
+    cameraFocusTargetId,
     camera,
     gl,
     controlsRef,
     activeProject,
+    selectedKeyIds,
     setCameraCommand,
     size.width,
     size.height,
+    isStudioMode,
   ])
 
   useEffect(() => {

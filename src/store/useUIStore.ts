@@ -4,7 +4,14 @@ interface UIState {
   cameraMode: '3d' | 'face-edit'
   lightingMode: 'studio' | 'daylight'
   editingLayerId: string | null
-  cameraCommand: 'center' | 'zoom-in' | 'zoom-out' | 'screenshot' | null
+  cameraCommand:
+    | 'center'
+    | 'zoom-in'
+    | 'zoom-out'
+    | 'screenshot'
+    | 'focus-key'
+    | null
+  cameraFocusTargetId: string | null
   leftPanelOpen: boolean
   rightPanelOpen: boolean
   rightPanelTab: 'layers' | 'images'
@@ -22,7 +29,8 @@ interface UIState {
   setLightingMode: (mode: 'studio' | 'daylight') => void
   setEditingLayerId: (id: string | null) => void
   setCameraCommand: (
-    cmd: 'center' | 'zoom-in' | 'zoom-out' | 'screenshot' | null,
+    cmd: 'center' | 'zoom-in' | 'zoom-out' | 'screenshot' | 'focus-key' | null,
+    targetId?: string | null,
   ) => void
   toggleLeftPanel: () => void
   toggleRightPanel: () => void
@@ -48,6 +56,7 @@ export const useUIStore = create<UIState>((set) => ({
   lightingMode: 'studio',
   editingLayerId: null,
   cameraCommand: null,
+  cameraFocusTargetId: null,
   leftPanelOpen: true,
   rightPanelOpen: true,
   rightPanelTab: 'layers',
@@ -60,7 +69,8 @@ export const useUIStore = create<UIState>((set) => ({
   setCameraMode: (mode) => set({ cameraMode: mode }),
   setLightingMode: (mode) => set({ lightingMode: mode }),
   setEditingLayerId: (id) => set({ editingLayerId: id }),
-  setCameraCommand: (cmd) => set({ cameraCommand: cmd }),
+  setCameraCommand: (cmd, targetId = null) =>
+    set({ cameraCommand: cmd, cameraFocusTargetId: targetId }),
   toggleLeftPanel: () =>
     set((state) => ({ leftPanelOpen: !state.leftPanelOpen })),
   toggleRightPanel: () =>

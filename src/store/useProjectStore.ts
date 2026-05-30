@@ -700,5 +700,6 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     )
 
     useUIStore.getState().setEditingLayerId(layerId)
+    useUIStore.getState().setCameraCommand('focus-key', hoveredKeyId)
   },
 }))
