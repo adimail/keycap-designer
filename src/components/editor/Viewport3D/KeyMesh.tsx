@@ -190,7 +190,11 @@ export function KeyMesh({
       return geometryCache.get(cacheKey)!
     }
 
-    const geosParams: { shape: THREE.Shape; offsetY: number }[] = []
+    const geosParams: {
+      shape: THREE.Shape
+      offsetY: number
+      depth?: number
+    }[] = []
 
     if (keyData.shape === 'iso-enter') {
       const pts = [
@@ -213,21 +217,24 @@ export function KeyMesh({
       ]
       geosParams.push({ shape: createShape(pts), offsetY: 0 })
     } else if (keyData.shape === 'stepped-caps') {
+      // Extended left shape to overlap the right step
       const leftPts = [
         [-0.875 + 0.08, 0.5 - 0.08],
         [-0.875 + 0.08, -0.5 + 0.08],
-        [0.375 - 0.08, -0.5 + 0.08],
-        [0.375 - 0.08, 0.5 - 0.08],
-      ]
-      geosParams.push({ shape: createShape(leftPts), offsetY: 0 })
-
-      const rightPts = [
-        [0.375 + 0.08, 0.5 - 0.08],
         [0.375 + 0.08, -0.5 + 0.08],
+        [0.375 + 0.08, 0.5 - 0.08],
+      ]
+      geosParams.push({ shape: createShape(leftPts), offsetY: 0, depth: 0.9 })
+
+      // Extended right step to cleanly intersect inside the left shape
+      // Lower depth keeps the base flush with the bottom while lowering the top.
+      const rightPts = [
+        [0.375 - 0.08, 0.5 - 0.08],
+        [0.375 - 0.08, -0.5 + 0.08],
         [0.875 - 0.08, -0.5 + 0.08],
         [0.875 - 0.08, 0.5 - 0.08],
       ]
-      geosParams.push({ shape: createShape(rightPts), offsetY: -0.2 })
+      geosParams.push({ shape: createShape(rightPts), offsetY: 0, depth: 0.45 })
     } else {
       const w = keyData.widthUnits
       const d = hU
@@ -242,7 +249,7 @@ export function KeyMesh({
 
     const extrudedGeometries = geosParams.map((g) => {
       const geo = new THREE.ExtrudeGeometry(g.shape, {
-        depth: 0.9,
+        depth: g.depth ?? 0.9,
         bevelEnabled: true,
         bevelSegments: 16,
         bevelSize: 0.05,
@@ -491,6 +498,15 @@ export function KeyMesh({
     if (pos.includes('right')) lx = offsetX
     if (pos.includes('top')) lz = -offsetZ
     if (pos.includes('bottom')) lz = offsetZ
+
+    if (keyData.shape === 'stepped-caps') {
+      lx -= 0.25
+    }
+
+    if (keyData.shape === 'big-ass-enter') {
+      lx = 0
+      lz = 0.4
+    }
 
     const ly = h + -lz * Math.tan(tilt) + 0.02
     return [lx, ly, lz]
