@@ -93,8 +93,8 @@ function LayerDecal({
   height: number
   tilt: number
 }) {
-  const { activeProject } = useProjectStore()
-  const imgObj = activeProject?.images.find((img) => img.id === layer.imageData)
+  const { globalImages } = useProjectStore()
+  const imgObj = globalImages.find((img) => img.id === layer.imageData)
   const defaultTex =
     'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='
   const texture = useTexture(
@@ -117,13 +117,15 @@ function LayerDecal({
         layer.position.y,
       ]
 
+  const aspect = imgObj?.aspectRatio || 1
+
   return (
     <Decal
       position={position}
       rotation={rotation}
-      scale={[layer.scale, layer.scale, 5]}
+      scale={[layer.scale * aspect, layer.scale, 5]}
     >
-      <meshStandardMaterial
+      <meshBasicMaterial
         map={texture}
         transparent
         opacity={layer.opacity}
@@ -148,8 +150,13 @@ export function KeyMesh({
   const [hovered, setHovered] = useState(false)
   const [ghostTex, setGhostTex] = useState<THREE.Texture | null>(null)
 
-  const { selectedKeyIds, setSelectedKeys, activeProject, placeStamp } =
-    useProjectStore()
+  const {
+    selectedKeyIds,
+    setSelectedKeys,
+    activeProject,
+    placeStamp,
+    globalImages,
+  } = useProjectStore()
   const {
     stampMode,
     stampImageId,
@@ -157,6 +164,7 @@ export function KeyMesh({
     stampSnapToCenter,
     stampHoverInfo,
     setStampHoverInfo,
+    setStampMode,
   } = useUIStore()
 
   const isSelected = selectedKeyIds.includes(keyData.id)
@@ -217,7 +225,6 @@ export function KeyMesh({
       ]
       geosParams.push({ shape: createShape(pts), offsetY: 0 })
     } else if (keyData.shape === 'stepped-caps') {
-      // Extended left shape to overlap the right step
       const leftPts = [
         [-0.875 + 0.08, 0.5 - 0.08],
         [-0.875 + 0.08, -0.5 + 0.08],
@@ -226,8 +233,6 @@ export function KeyMesh({
       ]
       geosParams.push({ shape: createShape(leftPts), offsetY: 0, depth: 0.9 })
 
-      // Extended right step to cleanly intersect inside the left shape
-      // Lower depth keeps the base flush with the bottom while lowering the top.
       const rightPts = [
         [0.375 - 0.08, 0.5 - 0.08],
         [0.375 - 0.08, -0.5 + 0.08],
@@ -335,7 +340,7 @@ export function KeyMesh({
 
   useEffect(() => {
     if (stampMode && stampImageId) {
-      const imgObj = activeProject?.images.find((i) => i.id === stampImageId)
+      const imgObj = globalImages.find((i) => i.id === stampImageId)
       if (imgObj?.data) {
         new THREE.TextureLoader().load(imgObj.data, (t) => {
           t.colorSpace = THREE.SRGBColorSpace
@@ -347,7 +352,7 @@ export function KeyMesh({
     } else {
       setGhostTex(null)
     }
-  }, [stampMode, stampImageId, activeProject])
+  }, [stampMode, stampImageId, globalImages])
 
   const { scopeScale, scopeCenterX, scopeCenterZ } = useMemo(() => {
     let sScale = 1
@@ -389,6 +394,9 @@ export function KeyMesh({
       scopeCenterZ: sCenterZ,
     }
   }, [stampMode, activeProject, stampScope, selectedKeyIds])
+
+  const ghostImgObj = globalImages.find((i) => i.id === stampImageId)
+  const ghostAspect = ghostImgObj?.aspectRatio || 1
 
   let ghostPos: [number, number, number] | null = null
   let ghostRotation: THREE.Euler | null = null
@@ -464,6 +472,8 @@ export function KeyMesh({
           [local.x, local.y, local.z],
           localNormal as [number, number, number],
         )
+        setStampMode(false)
+        setStampHoverInfo(null)
       }
       return
     }
@@ -554,9 +564,9 @@ export function KeyMesh({
             <Decal
               position={ghostPos}
               rotation={ghostRotation}
-              scale={[scopeScale, scopeScale, 5]}
+              scale={[scopeScale * ghostAspect, scopeScale, 5]}
             >
-              <meshStandardMaterial
+              <meshBasicMaterial
                 map={ghostTex}
                 transparent
                 opacity={0.5}

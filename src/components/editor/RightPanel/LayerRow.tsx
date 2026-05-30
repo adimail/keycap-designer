@@ -9,12 +9,12 @@ import { ActionButton } from '@/components/ActionButton'
 export function LayerRow({ layer }: { layer: Layer }) {
   const { attributes, listeners, setNodeRef, transform, transition } =
     useSortable({ id: layer.id })
-  const { updateLayer, deleteLayer, activeProject } = useProjectStore()
+  const { updateLayer, deleteLayer, globalImages } = useProjectStore()
   const { setEditingLayerId } = useUIStore()
 
   const style = { transform: CSS.Transform.toString(transform), transition }
 
-  const imgObj = activeProject?.images.find((i) => i.id === layer.imageData)
+  const imgObj = globalImages.find((i) => i.id === layer.imageData)
   const imageSrc = imgObj ? imgObj.data : layer.imageData
 
   return (

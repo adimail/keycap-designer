@@ -1,7 +1,9 @@
 import { useProjectStore } from '@/store/useProjectStore'
 import { ColorPicker } from '../../ui/ColorPicker'
-import { RotateCcw } from 'lucide-react'
+import { RotateCcw, ChevronDown, ChevronRight } from 'lucide-react'
 import { ActionButton } from '@/components/ActionButton'
+import { useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 
 const FONTS = [
   'Inter',
@@ -22,6 +24,9 @@ export function KeyPropertyEditor() {
     updateKeyLabelStyle,
     resetSelectedKeys,
   } = useProjectStore()
+
+  const [isLegendOpen, setIsLegendOpen] = useState(false)
+
   if (!activeProject || selectedKeyIds.length === 0) return null
 
   const firstKey = activeProject.keys.find((k) => k.id === selectedKeyIds[0])
@@ -51,59 +56,78 @@ export function KeyPropertyEditor() {
         />
       </div>
       <div className="p-3 bg-[var(--line)] rounded-lg flex flex-col gap-3">
-        <label className="block text-xs font-bold text-[var(--sea-ink)]">
-          Legend
-        </label>
-        <input
-          type="text"
-          value={firstKey.label}
-          onChange={(e) => updateSelectedKeys({ label: e.target.value })}
-          className="w-full px-2 py-1.5 text-xs border border-[var(--line)] rounded bg-[var(--surface)]"
-          placeholder="Multiple values..."
-        />
-        <div className="flex gap-2">
-          <select
-            value={firstKey.labelStyle.fontFamily}
-            onChange={(e) =>
-              updateKeyLabelStyle({ fontFamily: e.target.value })
-            }
-            className="flex-1 px-2 py-1.5 text-xs border border-[var(--line)] rounded bg-[var(--surface)]"
-          >
-            {FONTS.map((f) => (
-              <option key={f} value={f}>
-                {f}
-              </option>
-            ))}
-          </select>
-          <input
-            type="number"
-            min="8"
-            max="72"
-            value={firstKey.labelStyle.fontSize}
-            onChange={(e) =>
-              updateKeyLabelStyle({ fontSize: Number(e.target.value) })
-            }
-            className="w-16 px-2 py-1.5 text-xs border border-[var(--line)] rounded bg-[var(--surface)]"
-          />
-        </div>
-        <ColorPicker
-          color={firstKey.labelStyle.color}
-          onChange={(c) => updateKeyLabelStyle({ color: c })}
-        />
-        <div className="grid grid-cols-3 gap-1 w-24 mx-auto mt-2">
-          {positions.map((pos) => (
-            <ActionButton
-              type="button"
-              key={pos}
-              onClick={() => updateKeyLabelStyle({ position: pos })}
-              variant="ghost"
-              size="n"
-              className={`w-6 h-6 rounded border ${firstKey.labelStyle.position === pos ? 'bg-[var(--color-action)] border-[var(--color-action)]' : 'border-[var(--line)] bg-[var(--surface)] hover:bg-[var(--line)]'}`}
+        <button
+          onClick={() => setIsLegendOpen(!isLegendOpen)}
+          className="flex items-center justify-between w-full text-xs font-bold text-[var(--sea-ink)] outline-none cursor-pointer"
+        >
+          <span>Legend</span>
+          {isLegendOpen ? (
+            <ChevronDown className="w-4 h-4 text-[var(--sea-ink-soft)]" />
+          ) : (
+            <ChevronRight className="w-4 h-4 text-[var(--sea-ink-soft)]" />
+          )}
+        </button>
+        <AnimatePresence>
+          {isLegendOpen && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="flex flex-col gap-3 overflow-hidden"
             >
-              <span className="sr-only">{pos}</span>
-            </ActionButton>
-          ))}
-        </div>
+              <input
+                type="text"
+                value={firstKey.label}
+                onChange={(e) => updateSelectedKeys({ label: e.target.value })}
+                className="w-full px-2 py-1.5 text-xs border border-[var(--line)] rounded bg-[var(--surface)]"
+                placeholder="Multiple values..."
+              />
+              <div className="flex gap-2">
+                <select
+                  value={firstKey.labelStyle.fontFamily}
+                  onChange={(e) =>
+                    updateKeyLabelStyle({ fontFamily: e.target.value })
+                  }
+                  className="flex-1 px-2 py-1.5 text-xs border border-[var(--line)] rounded bg-[var(--surface)]"
+                >
+                  {FONTS.map((f) => (
+                    <option key={f} value={f}>
+                      {f}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  type="number"
+                  min="8"
+                  max="72"
+                  value={firstKey.labelStyle.fontSize}
+                  onChange={(e) =>
+                    updateKeyLabelStyle({ fontSize: Number(e.target.value) })
+                  }
+                  className="w-16 px-2 py-1.5 text-xs border border-[var(--line)] rounded bg-[var(--surface)]"
+                />
+              </div>
+              <ColorPicker
+                color={firstKey.labelStyle.color}
+                onChange={(c) => updateKeyLabelStyle({ color: c })}
+              />
+              <div className="grid grid-cols-3 gap-1 w-24 mx-auto mt-2">
+                {positions.map((pos) => (
+                  <ActionButton
+                    type="button"
+                    key={pos}
+                    onClick={() => updateKeyLabelStyle({ position: pos })}
+                    variant="ghost"
+                    size="n"
+                    className={`w-6 h-6 rounded border ${firstKey.labelStyle.position === pos ? 'bg-[var(--color-action)] border-[var(--color-action)]' : 'border-[var(--line)] bg-[var(--surface)] hover:bg-[var(--line)]'}`}
+                  >
+                    <span className="sr-only">{pos}</span>
+                  </ActionButton>
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
       <ActionButton
         type="button"

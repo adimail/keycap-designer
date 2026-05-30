@@ -7,6 +7,7 @@ interface UIState {
   cameraCommand: 'center' | 'zoom-in' | 'zoom-out' | 'screenshot' | null
   leftPanelOpen: boolean
   rightPanelOpen: boolean
+  rightPanelTab: 'layers' | 'images'
   stampMode: boolean
   stampImageId: string | null
   stampScope: 'all' | 'selected'
@@ -20,10 +21,18 @@ interface UIState {
   setCameraMode: (mode: '3d' | 'face-edit') => void
   setLightingMode: (mode: 'studio' | 'daylight') => void
   setEditingLayerId: (id: string | null) => void
-  setCameraCommand: (cmd: 'center' | 'zoom-in' | 'zoom-out' | 'screenshot' | null) => void
+  setCameraCommand: (
+    cmd: 'center' | 'zoom-in' | 'zoom-out' | 'screenshot' | null,
+  ) => void
   toggleLeftPanel: () => void
   toggleRightPanel: () => void
-  setStampMode: (active: boolean, imageId?: string | null, scope?: 'all' | 'selected') => void
+  toggleFullscreen: () => void
+  setRightPanelTab: (tab: 'layers' | 'images') => void
+  setStampMode: (
+    active: boolean,
+    imageId?: string | null,
+    scope?: 'all' | 'selected',
+  ) => void
   setStampSnapToCenter: (snap: boolean) => void
   setStampHoverInfo: (
     info: {
@@ -41,6 +50,7 @@ export const useUIStore = create<UIState>((set) => ({
   cameraCommand: null,
   leftPanelOpen: true,
   rightPanelOpen: true,
+  rightPanelTab: 'layers',
   stampMode: false,
   stampImageId: null,
   stampScope: 'all',
@@ -55,6 +65,15 @@ export const useUIStore = create<UIState>((set) => ({
     set((state) => ({ leftPanelOpen: !state.leftPanelOpen })),
   toggleRightPanel: () =>
     set((state) => ({ rightPanelOpen: !state.rightPanelOpen })),
+  toggleFullscreen: () =>
+    set((state) => {
+      const isFullscreen = !state.leftPanelOpen && !state.rightPanelOpen
+      return {
+        leftPanelOpen: isFullscreen,
+        rightPanelOpen: isFullscreen,
+      }
+    }),
+  setRightPanelTab: (tab) => set({ rightPanelTab: tab }),
   setStampMode: (active, imageId = null, scope = 'all') =>
     set({
       stampMode: active,

@@ -8,43 +8,54 @@ import { ActionButton } from '@/components/ActionButton'
 import { motion } from 'framer-motion'
 
 export function ImagesTab() {
-  const { activeProject, addImage, deleteImage, selectedKeyIds } = useProjectStore()
+  const { activeProject, addImage, deleteImage, selectedKeyIds, globalImages } =
+    useProjectStore()
   const { stampMode, stampImageId, setStampMode } = useUIStore()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || [])
+    if (!files.length) return
 
-    if (file.size > 5 * 1024 * 1024) {
-      return toast.error('File too large', {
-        description: 'Maximum size is 5MB',
-      })
-    }
-
-    const reader = new FileReader()
-    const upload = new Promise<string>((resolve, reject) => {
-      reader.onload = (ev) => {
-        if (ev.target?.result) {
-          addImage({
-            id: uuidv4(),
-            name: file.name,
-            data: ev.target.result as string,
-          })
-          resolve(file.name)
-        } else {
-          reject(new Error('Failed to read file'))
-        }
+    const uploadPromises = files.map((file) => {
+      if (file.size > 5 * 1024 * 1024) {
+        return Promise.reject(new Error('File too large'))
       }
-      reader.onerror = () => reject(new Error('Failed to read file'))
-      reader.readAsDataURL(file)
+      return new Promise<string>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = (ev) => {
+          if (ev.target?.result) {
+            const img = new Image()
+            img.onload = () => {
+              const aspectRatio = img.width / img.height
+              addImage({
+                id: uuidv4(),
+                name: file.name,
+                data: ev?.target?.result as string,
+                aspectRatio,
+              })
+              resolve(file.name)
+            }
+            img.onerror = () => reject(new Error('Failed to load image'))
+            img.src = ev.target.result as string
+          } else {
+            reject(new Error('Failed to read file'))
+          }
+        }
+        reader.onerror = () => reject(new Error('Failed to read file'))
+        reader.readAsDataURL(file)
+      })
     })
 
-    toast.promise(upload, {
-      loading: 'Processing image...',
-      success: (name) => `Added ${name} to library`,
-      error: 'Error uploading image',
+    toast.promise(Promise.all(uploadPromises), {
+      loading: 'Processing images...',
+      success: `${files.length} image(s) added to library`,
+      error: 'Error uploading images',
     })
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
   }
 
   const getUsageCount = (imgId: string) => {
@@ -56,12 +67,12 @@ export function ImagesTab() {
     return count
   }
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (
       window.confirm('Delete this image? It will be removed from all keys.')
     ) {
-      const img = activeProject?.images.find((i) => i.id === id)
-      deleteImage(id)
+      const img = globalImages.find((i) => i.id === id)
+      await deleteImage(id)
       if (stampImageId === id) {
         setStampMode(false)
       }
@@ -80,6 +91,7 @@ export function ImagesTab() {
         ref={fileInputRef}
         onChange={handleUpload}
         accept="image/png, image/jpeg, image/svg+xml, image/webp"
+        multiple
         className="hidden"
       />
       <ActionButton
@@ -89,7 +101,7 @@ export function ImagesTab() {
         size="sm"
         className="w-full mb-4 bg-[var(--line)]"
       >
-        <Plus className="w-4 h-4" /> Upload Image
+        <Plus className="w-4 h-4" /> Upload Images
       </ActionButton>
       <motion.div
         className="grid grid-cols-2 gap-2 overflow-y-auto pb-10"
@@ -100,7 +112,7 @@ export function ImagesTab() {
         initial="hidden"
         animate="visible"
       >
-        {(activeProject?.images || []).map((img) => {
+        {globalImages.map((img) => {
           const usage = getUsageCount(img.id)
           const isStampingThis = stampMode && stampImageId === img.id
           return (

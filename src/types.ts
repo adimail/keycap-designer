@@ -47,6 +47,7 @@ export interface ProjectImage {
   id: string
   data: string
   name: string
+  aspectRatio?: number
 }
 
 export interface StudioState {

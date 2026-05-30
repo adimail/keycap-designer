@@ -1,93 +1,90 @@
 import { useProjectStore } from '@/store/useProjectStore'
 import { cn } from '@/utils/cn'
 import { ActionButton } from '@/components/ActionButton'
-
-const GROUPS = [
-  { name: 'All', match: () => true },
-  {
-    name: 'Alphas',
-    match: (k: any) =>
-      /^[a-zA-Z]$/.test(k.id) ||
-      /^[a-zA-Z]$/.test(k.label || '') ||
-      /^Key[A-Z]$/i.test(k.id),
-  },
-  {
-    name: 'Numbers',
-    match: (k: any) =>
-      /^[0-9]$/.test(k.id) ||
-      /^[0-9]$/.test(k.label || '') ||
-      /^Digit[0-9]$/i.test(k.id),
-  },
-  {
-    name: 'F-Keys',
-    match: (k: any) =>
-      /^F[1-9]$|^F1[0-2]$/i.test(k.id) ||
-      /^F[1-9]$|^F1[0-2]$/i.test(k.label || ''),
-  },
-  {
-    name: 'Mods',
-    match: (k: any) => {
-      const id = String(k.id).toUpperCase()
-      const lbl = String(k.label || '').toUpperCase()
-      const mods = [
-        'SHIFT',
-        'CTRL',
-        'CONTROL',
-        'WIN',
-        'ALT',
-        'FN',
-        'MENU',
-        'CAPS',
-        'CMD',
-        'COMMAND',
-        'OPT',
-        'OPTION',
-        'SUPER',
-        'META',
-      ]
-      return mods.some((m) => id.includes(m) || lbl === m)
-    },
-  },
-  {
-    name: 'Nav',
-    match: (k: any) => {
-      const id = String(k.id).toUpperCase()
-      const lbl = String(k.label || '').toUpperCase()
-      const navs = [
-        'UP',
-        'DOWN',
-        'LEFT',
-        'RIGHT',
-        'HM',
-        'HOME',
-        'PU',
-        'PAGEUP',
-        'PGUP',
-        'PD',
-        'PAGEDOWN',
-        'PGDN',
-        'END',
-        'DEL',
-        'DELETE',
-        'INS',
-        'INSERT',
-        'PRT',
-        'PRINT',
-        'SCR',
-        'SCROLL',
-        'PAU',
-        'PAUSE',
-        'ARROW',
-      ]
-      return navs.some((n) => id.includes(n) || lbl === n)
-    },
-  },
-]
+import { getLayoutKeys } from '@/lib/layouts'
 
 export function QuickSelect() {
   const { activeProject, selectedKeyIds, setSelectedKeys } = useProjectStore()
 
   if (!activeProject) return null
+
+  const originalKeys = getLayoutKeys(activeProject.layout)
+
+  const getOrigLabel = (k: any) => {
+    const orig = originalKeys.find((ok) => ok.id === k.id)
+    return orig?.label || k.label || ''
+  }
+
+  const GROUPS = [
+    { name: 'All', match: () => true },
+    {
+      name: 'Alphas',
+      match: (k: any) => /^[a-zA-Z]$/.test(getOrigLabel(k)),
+    },
+    {
+      name: 'Numbers',
+      match: (k: any) => /^[0-9]$/.test(getOrigLabel(k)),
+    },
+    {
+      name: 'F-Keys',
+      match: (k: any) => /^F[1-9]$|^F1[0-2]$/i.test(getOrigLabel(k)),
+    },
+    {
+      name: 'Mods',
+      match: (k: any) => {
+        const lbl = String(getOrigLabel(k)).toUpperCase()
+        return [
+          'SHIFT',
+          'CTRL',
+          'CONTROL',
+          'WIN',
+          'ALT',
+          'FN',
+          'MENU',
+          'CAPS',
+          'CAPSLOCK',
+          'CMD',
+          'COMMAND',
+          'OPT',
+          'OPTION',
+          'SUPER',
+          'META',
+        ].includes(lbl)
+      },
+    },
+    {
+      name: 'Nav',
+      match: (k: any) => {
+        const lbl = String(getOrigLabel(k)).toUpperCase()
+        return [
+          'UP',
+          'DOWN',
+          'LEFT',
+          'RIGHT',
+          'HM',
+          'HOME',
+          'PU',
+          'PAGEUP',
+          'PGUP',
+          'PD',
+          'PAGEDOWN',
+          'PGDN',
+          'END',
+          'DEL',
+          'DELETE',
+          'INS',
+          'INSERT',
+          'PRT',
+          'PRINT',
+          'SCR',
+          'SCROLL',
+          'PAU',
+          'PAUSE',
+          'ARROW',
+        ].includes(lbl)
+      },
+    },
+  ]
 
   const toggleGroup = (matchFn: (k: any) => boolean) => {
     const groupKeys = activeProject.keys

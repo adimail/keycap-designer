@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { LayersTab } from './LayersTab'
 import { ImagesTab } from './ImagesTab'
 import { useProjectStore } from '@/store/useProjectStore'
@@ -6,9 +5,9 @@ import { useUIStore } from '@/store/useUIStore'
 import { SegmentedControl } from '@/components/ui/SegmentedControl'
 import { ActionButton } from '@/components/ActionButton'
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion'
+import { getLayoutKeys } from '@/lib/layouts'
 
 export function RightPanel() {
-  const [tab, setTab] = useState<'layers' | 'images'>('layers')
   const {
     activeProject,
     selectedKeyIds,
@@ -16,7 +15,11 @@ export function RightPanel() {
     transformEnterCluster,
     toggleSteppedCaps,
   } = useProjectStore()
-  const { rightPanelOpen } = useUIStore()
+  const {
+    rightPanelOpen,
+    rightPanelTab: tab,
+    setRightPanelTab: setTab,
+  } = useUIStore()
 
   if (!activeProject) {
     return (
@@ -38,13 +41,24 @@ export function RightPanel() {
     )
   }
 
+  const originalKeys = getLayoutKeys(activeProject.layout)
+
   const selectedKeys = activeProject.keys.filter((k) =>
     selectedKeyIds.includes(k.id),
   )
-  const enterKey = selectedKeys.find((k) => k.label === 'ENTER')
-  const capsKey = selectedKeys.find(
-    (k) => k.label === 'CAPS' || k.label === 'CAPSLOCK',
-  )
+
+  const isEnterKey = (id: string) => {
+    const orig = originalKeys.find((ok) => ok.id === id)
+    return orig?.label === 'ENTER'
+  }
+
+  const isCapsKey = (id: string) => {
+    const orig = originalKeys.find((ok) => ok.id === id)
+    return orig?.label === 'CAPS' || orig?.label === 'CAPSLOCK'
+  }
+
+  const enterKey = selectedKeys.find((k) => isEnterKey(k.id))
+  const capsKey = selectedKeys.find((k) => isCapsKey(k.id))
 
   return (
     <div

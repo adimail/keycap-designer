@@ -129,12 +129,14 @@ export function Viewport3D({ isStudioMode }: Viewport3DProps = {}) {
 
       if ((e.metaKey || e.ctrlKey) && e.key === 'z') {
         e.preventDefault()
+        e.stopPropagation()
         if (e.shiftKey) redo()
         else undo()
       }
 
       if ((e.metaKey || e.ctrlKey) && (e.key === 'a' || e.key === 'A')) {
         e.preventDefault()
+        e.stopPropagation()
         if (activeProject)
           setSelectedKeys(
             activeProject.keys.filter((k) => k.visible).map((k) => k.id),
@@ -142,6 +144,8 @@ export function Viewport3D({ isStudioMode }: Viewport3DProps = {}) {
       }
 
       if (e.key === 'Escape') {
+        e.preventDefault()
+        e.stopPropagation()
         if (stampMode) {
           setStampMode(false)
           setStampHoverInfo(null)
@@ -153,11 +157,17 @@ export function Viewport3D({ isStudioMode }: Viewport3DProps = {}) {
       }
 
       if (e.key === 'f' || e.key === 'F') {
+        e.preventDefault()
+        e.stopPropagation()
         setCameraCommand('center')
       }
 
       if (e.key === 'Backspace' || e.key === 'Delete') {
-        if (editingLayerId) deleteLayer(editingLayerId)
+        if (editingLayerId) {
+          e.preventDefault()
+          e.stopPropagation()
+          deleteLayer(editingLayerId)
+        }
       }
     }
 

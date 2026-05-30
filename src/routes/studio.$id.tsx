@@ -20,11 +20,12 @@ function StudioRoute() {
   const project = Route.useLoaderData()
   const { keyId } = Route.useSearch()
   const navigate = Route.useNavigate()
-  const { setActiveProject } = useProjectStore()
+  const { setActiveProject, loadGlobalImages } = useProjectStore()
 
   useEffect(() => {
+    loadGlobalImages()
     setActiveProject(project)
-  }, [project.id])
+  }, [project.id, setActiveProject, loadGlobalImages])
 
   const handleKeyIdChange = (newKeyId: string | null) => {
     navigate({

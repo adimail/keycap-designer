@@ -13,7 +13,12 @@ import { toast } from 'sonner'
 import { DEFAULT_COLORS, UNDO_REDO } from '@/lib/constants'
 import { DEFAULT_KEY_STYLE } from '@/lib/layouts'
 import { useUIStore } from './useUIStore'
-import { saveProject } from '@/lib/db'
+import {
+  saveProject,
+  saveGlobalImage,
+  getAllGlobalImages,
+  deleteGlobalImage,
+} from '@/lib/db'
 
 interface ProjectState {
   activeProject: Project | null
@@ -23,6 +28,7 @@ interface ProjectState {
   selectedKeyIds: string[]
   studioActiveKeyId: string | null
   isProcessing: boolean
+  globalImages: ProjectImage[]
 
   setIsProcessing: (val: boolean) => void
   setActiveProject: (project: Project) => void
@@ -33,8 +39,9 @@ interface ProjectState {
   updateKeyLabelStyle: (updates: Partial<KeyData['labelStyle']>) => void
   updateGlobalSettings: (updates: Partial<GlobalSettings>) => void
   changeLayout: (layout: string) => void
-  addImage: (image: ProjectImage) => void
-  deleteImage: (id: string) => void
+  addImage: (image: ProjectImage) => Promise<void>
+  deleteImage: (id: string) => Promise<void>
+  loadGlobalImages: () => Promise<void>
   addLayerToSelection: (layer: Omit<Layer, 'id'>) => void
   updateLayer: (layerId: string, updates: Partial<Layer>) => void
   deleteLayer: (layerId: string) => void
@@ -74,6 +81,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   selectedKeyIds: [],
   studioActiveKeyId: null,
   isProcessing: false,
+  globalImages: [],
 
   setIsProcessing: (val) => set({ isProcessing: val }),
 
@@ -269,34 +277,35 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     }
   },
 
-  addImage: (image) => {
-    const { activeProject } = get()
-    if (!activeProject) return
-    set(
-      mutateProject(get(), {
-        ...activeProject,
-        images: [...(activeProject.images || []), image],
-        updatedAt: new Date().toISOString(),
-      }),
-    )
+  addImage: async (image) => {
+    await saveGlobalImage(image)
+    set((state) => ({ globalImages: [...state.globalImages, image] }))
   },
 
-  deleteImage: (id) => {
-    const { activeProject } = get()
-    if (!activeProject) return
-    const images = (activeProject.images || []).filter((img) => img.id !== id)
-    const keys = activeProject.keys.map((k) => ({
-      ...k,
-      layers: k.layers.filter((l) => l.imageData !== id),
+  deleteImage: async (id) => {
+    await deleteGlobalImage(id)
+    set((state) => ({
+      globalImages: state.globalImages.filter((i) => i.id !== id),
     }))
-    set(
-      mutateProject(get(), {
-        ...activeProject,
-        images,
-        keys,
-        updatedAt: new Date().toISOString(),
-      }),
-    )
+    const { activeProject } = get()
+    if (activeProject) {
+      const keys = activeProject.keys.map((k) => ({
+        ...k,
+        layers: k.layers.filter((l) => l.imageData !== id),
+      }))
+      set(
+        mutateProject(get(), {
+          ...activeProject,
+          keys,
+          updatedAt: new Date().toISOString(),
+        }),
+      )
+    }
+  },
+
+  loadGlobalImages: async () => {
+    const images = await getAllGlobalImages()
+    set({ globalImages: images })
   },
 
   addLayerToSelection: (layerData) => {
@@ -452,17 +461,20 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     const { activeProject } = get()
     if (!activeProject) return
 
-    const enterKey = activeProject.keys.find((k) => k.label === 'ENTER')
-    if (!enterKey) return
+    const originalKeys = getLayoutKeys(activeProject.layout)
+    const enterOrig = originalKeys.find((ok) => ok.label === 'ENTER')
+    const slashOrig = originalKeys.find((ok) => ok.label === '\\')
 
-    let baseY = enterKey.row
-    if (enterKey.shape === 'iso-enter' || enterKey.shape === 'big-ass-enter') {
-      baseY = enterKey.row + 1
-    }
-    const rightEdge = enterKey.col + enterKey.widthUnits
+    if (!enterOrig) return
 
     const keys = activeProject.keys.map((k) => {
-      if (k.label === 'ENTER') {
+      if (k.id === enterOrig.id) {
+        let baseY = enterOrig.row
+        if (k.shape === 'iso-enter' || k.shape === 'big-ass-enter') {
+          baseY = enterOrig.row + 1
+        }
+        const rightEdge = enterOrig.col + enterOrig.widthUnits
+
         if (style === 'ansi') {
           return {
             ...k,
@@ -497,7 +509,19 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
           }
         }
       }
-      if (k.label === '\\') {
+
+      if (slashOrig && k.id === slashOrig.id) {
+        let baseY = enterOrig.row
+        if (
+          activeProject.keys.find((key) => key.id === enterOrig.id)?.shape ===
+            'iso-enter' ||
+          activeProject.keys.find((key) => key.id === enterOrig.id)?.shape ===
+            'big-ass-enter'
+        ) {
+          baseY = enterOrig.row + 1
+        }
+        const rightEdge = enterOrig.col + enterOrig.widthUnits
+
         if (style === 'ansi') {
           return {
             ...k,
@@ -535,13 +559,12 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   },
 
   toggleSteppedCaps: (stepped) => {
-    const { activeProject, selectedKeyIds } = get()
+    const { activeProject } = get()
     if (!activeProject) return
+    const originalKeys = getLayoutKeys(activeProject.layout)
     const keys = activeProject.keys.map((k) => {
-      if (
-        selectedKeyIds.includes(k.id) &&
-        (k.label === 'CAPS' || k.label === 'CAPSLOCK')
-      ) {
+      const orig = originalKeys.find((ok) => ok.id === k.id)
+      if (orig?.label === 'CAPS' || orig?.label === 'CAPSLOCK') {
         return {
           ...k,
           shape: stepped ? ('stepped-caps' as const) : ('standard' as const),
@@ -587,13 +610,13 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   setHasUnsavedChanges: (val) => set({ hasUnsavedChanges: val }),
 
   placeStamp: (hoveredKeyId, localPos, localNormal) => {
-    const { activeProject, selectedKeyIds } = get()
+    const { activeProject, selectedKeyIds, globalImages } = get()
     const { stampImageId, stampScope, stampSnapToCenter } =
       useUIStore.getState()
     if (!activeProject || !stampImageId) return
 
     const layerId = uuidv4()
-    const imgObj = activeProject.images.find((i) => i.id === stampImageId)
+    const imgObj = globalImages.find((i) => i.id === stampImageId)
     const name = imgObj ? imgObj.name : 'Stamp'
 
     const targetKeys =
@@ -675,5 +698,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         updatedAt: new Date().toISOString(),
       }),
     )
+
+    useUIStore.getState().setEditingLayerId(layerId)
   },
 }))
