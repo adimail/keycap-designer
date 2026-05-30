@@ -1,5 +1,6 @@
 import { useProjectStore } from '@/store/useProjectStore'
 import { KeyMesh } from './KeyMesh'
+import { KeyboardBase } from './KeyboardBase'
 import { Center } from '@react-three/drei'
 
 export function KeyboardModel() {
@@ -7,8 +8,9 @@ export function KeyboardModel() {
   if (!activeProject) return null
 
   return (
-    <Center>
+    <Center position={[0, 0.7, 0]}>
       <group>
+        <KeyboardBase />
         {activeProject.keys
           .filter((k) => k.visible)
           .map((key) => (

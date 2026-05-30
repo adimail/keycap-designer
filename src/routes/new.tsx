@@ -31,6 +31,7 @@ function NewProjectRoute() {
           caseMaterial: 'aluminum',
           profile: 'Cherry',
           finish: 'matte',
+          caseStyle: 'none',
         },
       }
       await saveProject(project)

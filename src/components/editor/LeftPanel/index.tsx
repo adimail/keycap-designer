@@ -5,6 +5,8 @@ import { QuickSelect } from './QuickSelect'
 import { ActionButton } from '@/components/ActionButton'
 import { LayoutGroup, motion, AnimatePresence } from 'framer-motion'
 import { PROFILE_OPTIONS } from '@/lib/constants'
+import { SegmentedControl } from '@/components/ui/SegmentedControl'
+import { ColorPicker } from '@/components/ui/ColorPicker'
 
 export function LeftPanel() {
   const { selectedKeyIds, activeProject, updateGlobalSettings } =
@@ -31,10 +33,11 @@ export function LeftPanel() {
       className={`transition-all duration-300 ease-in-out shrink-0 border-r border-[var(--line)] bg-[var(--surface)] z-10 overflow-hidden ${leftPanelOpen ? 'w-[260px]' : 'w-0 border-r-0'}`}
     >
       <div className="w-[260px] h-full overflow-y-auto p-4 flex flex-col">
-        <div className="flex flex-col gap-4 pb-6 border-b border-[var(--line)] mb-4">
+        <div className="flex flex-col gap-5 pb-6 border-b border-[var(--line)] mb-4">
           <h3 className="text-xs font-bold text-[var(--sea-ink)] uppercase tracking-wider">
             Global Config
           </h3>
+
           <div>
             <label className="block text-[10px] font-bold mb-1.5 text-[var(--sea-ink-soft)] uppercase">
               Project Profile
@@ -44,7 +47,6 @@ export function LeftPanel() {
                 {PROFILE_OPTIONS.map((option) => {
                   const isActive =
                     activeProject.globalSettings.profile === option.value
-
                   return (
                     <ActionButton
                       type="button"
@@ -77,6 +79,61 @@ export function LeftPanel() {
                 })}
               </div>
             </LayoutGroup>
+          </div>
+
+          {/* NEW: Base / Chassis Config */}
+          <div className="flex flex-col gap-3 mt-2 pt-4 border-t border-[var(--line)]">
+            <div>
+              <label className="block text-[10px] font-bold mb-1.5 text-[var(--sea-ink-soft)] uppercase">
+                Chassis Style
+              </label>
+              <SegmentedControl
+                options={[
+                  { label: 'None', value: 'none' },
+                  { label: 'Flat', value: 'flat' },
+                  { label: 'High', value: 'high-profile' },
+                ]}
+                value={activeProject.globalSettings.caseStyle || 'none'}
+                onChange={(v) => updateGlobalSettings({ caseStyle: v as any })}
+              />
+            </div>
+
+            {activeProject.globalSettings.caseStyle &&
+              activeProject.globalSettings.caseStyle !== 'none' && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  className="flex flex-col gap-3"
+                >
+                  <div>
+                    <label className="block text-[10px] font-bold mb-1.5 text-[var(--sea-ink-soft)] uppercase">
+                      Material
+                    </label>
+                    <SegmentedControl
+                      options={[
+                        { label: 'Alu', value: 'aluminum' },
+                        { label: 'Poly', value: 'frosted-poly' },
+                        { label: 'Brass', value: 'brass' },
+                      ]}
+                      value={
+                        activeProject.globalSettings.caseMaterial || 'aluminum'
+                      }
+                      onChange={(v) =>
+                        updateGlobalSettings({ caseMaterial: v as any })
+                      }
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold mb-1.5 text-[var(--sea-ink-soft)] uppercase">
+                      Case Color
+                    </label>
+                    <ColorPicker
+                      color={activeProject.globalSettings.caseColor}
+                      onChange={(c) => updateGlobalSettings({ caseColor: c })}
+                    />
+                  </div>
+                </motion.div>
+              )}
           </div>
         </div>
 

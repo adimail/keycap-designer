@@ -38,6 +38,7 @@ export interface KeyData {
 export interface GlobalSettings {
   caseColor: string
   caseMaterial: 'aluminum' | 'frosted-poly' | 'brass' | 'walnut'
+  caseStyle?: 'none' | 'flat' | 'high-profile'
   profile: 'SA' | 'OEM' | 'Cherry' | 'DSA' | 'XDA'
   finish: 'matte' | 'glossy' | 'transparent'
 }
